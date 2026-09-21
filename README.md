@@ -22,7 +22,7 @@ npm run dev   # in a second terminal, for Vite HMR
 
 The app ships with a multi-stage `Dockerfile` with two targets:
 
-- **`app`** — PHP 8.3-FPM, compiled Composer vendor + built Vite assets, runs `php-fpm`.
+- **`app`** — PHP 8.4-FPM, compiled Composer vendor + built Vite assets, runs `php-fpm`.
 - **`web`** — nginx, serves static files directly and proxies `*.php` requests to `app:9000`.
 
 `docker-compose.yml` wires these together with a MySQL container and a queue/scheduler worker, all on an isolated `civicpulse` bridge network. Nothing here binds to host ports 80/443, so it won't collide with anything else already running on a machine.
@@ -137,3 +137,26 @@ Every image is also pushed with its commit SHA as a tag. To roll back, on the VP
 ```
 IMAGE_TAG=<previous-sha> docker compose up -d
 ```
+
+### Common operations (VPS or local)
+
+Run from the directory containing `docker-compose.yml` (`/srv/civicpulse` on the VPS).
+
+```
+docker compose restart              # restart all services, same containers/images
+docker compose restart app          # restart just one service (app, web, queue, scheduler, db)
+
+docker compose up -d                # recreate any service whose image/config changed, leave the rest running
+docker compose up -d --force-recreate  # recreate everything even if nothing changed (e.g. after editing .env)
+
+docker compose down                 # stop and remove containers (volumes are kept)
+docker compose up -d                # start them again
+
+docker compose logs -f app          # tail logs for one service
+docker compose ps                   # container status
+
+docker compose exec app sh          # shell into the app container
+docker compose exec app php artisan tinker
+```
+
+A plain `docker compose restart` does **not** pick up `.env` changes — it just restarts the existing container process. Use `docker compose up -d --force-recreate` after editing `.env` so the container is rebuilt with the new environment.
