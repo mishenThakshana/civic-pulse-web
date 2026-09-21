@@ -115,14 +115,26 @@ The VPS already runs other sites behind its own nginx + systemd + Postgres. This
    ```
    Also drop your Firebase service-account JSON into `storage/app/firebase-service-account.json` inside the `storage-data` volume (see the Docker section above) if push notifications are needed.
 
-5. **First deploy** (this is what the GitHub Actions `deploy` job repeats on every push after this):
+5. **First deploy:**
    ```
    docker compose pull
    docker compose up -d
-   docker compose exec app php artisan migrate --force --seed
+   docker compose exec app php artisan migrate --force
+   ```
+   The GitHub Actions `deploy` job repeats exactly this (minus `pull`/`up -d`'s first-run setup) on every push after this — just the plain `migrate --force`, no `--seed`.
+
+6. **Seed the admin user (one-time only, not part of the automated deploy):**
+   ```
+   docker compose exec app php artisan db:seed --force
+   ```
+   This creates `admin@civicpulse.test` with the password `password`, plus the default categories/departments. Do **not** run it again on this database — categories/departments use `firstOrCreate` and are safe to repeat, but the admin user is created with a plain `create()` and will throw a duplicate-email error on a second run.
+
+   Change the seeded password immediately since it's now live on the public domain:
+   ```
+   docker compose exec app php artisan tinker --execute 'App\Models\User::where("email","admin@civicpulse.test")->first()->update(["password"=>Hash::make("<your-real-password>")]);'
    ```
 
-6. **Point the host nginx at it.** Use `docker/vps-nginx-host.conf.example` as a template — it's a reference file only, meant to be copied onto the VPS as a new server block alongside the existing sites:
+7. **Point the host nginx at it.** Use `docker/vps-nginx-host.conf.example` as a template — it's a reference file only, meant to be copied onto the VPS as a new server block alongside the existing sites:
    ```
    sudo cp docker/vps-nginx-host.conf.example /etc/nginx/sites-available/civicpulse.ribluma.com
    sudo ln -s /etc/nginx/sites-available/civicpulse.ribluma.com /etc/nginx/sites-enabled/

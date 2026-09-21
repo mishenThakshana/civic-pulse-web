@@ -32,6 +32,13 @@ RUN npm run build
 FROM php:8.4-fpm-alpine AS app
 
 RUN apk add --no-cache \
+        icu-libs \
+        libzip \
+        libpng \
+        oniguruma \
+        freetype \
+        libjpeg-turbo \
+    && apk add --no-cache --virtual .build-deps \
         icu-dev \
         libzip-dev \
         libpng-dev \
@@ -47,7 +54,7 @@ RUN apk add --no-cache \
         gd \
         pcntl \
         opcache \
-    && apk del --no-cache icu-dev libzip-dev libpng-dev oniguruma-dev freetype-dev libjpeg-turbo-dev
+    && apk del --no-cache .build-deps
 
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
 COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/zz-uploads.ini
