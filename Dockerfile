@@ -29,7 +29,7 @@ RUN npm run build
 ##############################################
 # 3. PHP-FPM application image
 ##############################################
-FROM php:8.3-fpm-alpine AS app
+FROM php:8.4-fpm-alpine AS app
 
 RUN apk add --no-cache \
         icu-dev \
