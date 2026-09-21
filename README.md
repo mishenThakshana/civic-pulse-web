@@ -70,7 +70,7 @@ Start from `.env.docker.example`, which differs from `.env.example` in a few Doc
 2. **build-and-push** *(main only)* — builds both Docker targets and pushes them to GitHub Container Registry:
    - `ghcr.io/mishenthakshana/civic-pulse-app:latest` / `:<sha>`
    - `ghcr.io/mishenthakshana/civic-pulse-web-nginx:latest` / `:<sha>`
-3. **deploy** *(main only)* — SSHes into the VPS, `docker compose pull && docker compose up -d`, then runs migrations.
+3. **deploy** *(main only)* — SSHes into the VPS, hard-resets its git clone to `origin/main` (so `docker-compose.yml`, nginx config, etc. stay in sync too — not just the app image), then `docker compose pull && docker compose up -d`, then runs migrations.
 
 ### Required GitHub secrets
 
@@ -100,13 +100,14 @@ The VPS already runs other sites behind its own nginx + systemd + Postgres. This
    ```
    Append `civicpulse_deploy_key.pub` to the VPS's `~/.ssh/authorized_keys` for the deploy user, then paste the contents of `civicpulse_deploy_key` (the private key) into the `VPS_SSH_KEY` GitHub secret. Delete the local copies afterward.
 
-3. **Create the deploy directory on the VPS:**
+3. **Clone the repo onto the VPS as the deploy directory** (the `deploy` job runs `git fetch` + `git reset --hard` here on every push, so this must be a real git clone, not just a copy of `docker-compose.yml`):
    ```
    sudo mkdir -p /srv/civicpulse
+   git clone https://github.com/mishenThakshana/civic-pulse-web.git /srv/civicpulse
    cd /srv/civicpulse
    ```
 
-4. **Copy `docker-compose.yml` and `.env.docker.example` there** (scp, or `git clone` the repo and symlink), rename the env file to `.env`, and fill in real secrets:
+4. **Create `.env`** (git-ignored, so `git reset --hard` never touches it) and fill in real secrets:
    ```
    cp .env.docker.example .env
    php -r "echo 'base64:'.base64_encode(random_bytes(32)), PHP_EOL;"   # → APP_KEY
@@ -135,22 +136,27 @@ After this, every push to `main` builds, tests, and redeploys automatically.
 
 Every image is also pushed with its commit SHA as a tag. To roll back, on the VPS:
 ```
-IMAGE_TAG=<previous-sha> docker compose up -d
+export IMAGE_TAG=<previous-sha>
+docker compose pull
+docker compose up -d
 ```
+`docker compose pull` is required — `up -d` alone reuses whatever image is already cached locally and won't fetch the SHA tag if it isn't already there.
 
 ### Common operations (VPS or local)
 
 Run from the directory containing `docker-compose.yml` (`/srv/civicpulse` on the VPS).
 
 ```
-docker compose restart              # restart all services, same containers/images
+docker compose restart              # restart all services, same containers/images — never pulls anything new
 docker compose restart app          # restart just one service (app, web, queue, scheduler, db)
 
-docker compose up -d                # recreate any service whose image/config changed, leave the rest running
-docker compose up -d --force-recreate  # recreate everything even if nothing changed (e.g. after editing .env)
+docker compose pull && docker compose up -d   # fetch the latest :latest image from GHCR and recreate if it changed
+docker compose up -d --pull always            # same idea, one command
+
+docker compose up -d --force-recreate  # recreate everything even if the image didn't change (e.g. after editing .env)
 
 docker compose down                 # stop and remove containers (volumes are kept)
-docker compose up -d                # start them again
+docker compose up -d                # start them again — reuses whatever image is already cached locally
 
 docker compose logs -f app          # tail logs for one service
 docker compose ps                   # container status
