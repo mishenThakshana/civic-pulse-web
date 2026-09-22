@@ -18,7 +18,7 @@ class ReportResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
-            'category' => new CategoryResource($this->whenLoaded('category')),
+            'category' => $this->whenLoaded('category', fn () => $this->category ? new CategoryResource($this->category) : null),
             'department' => new DepartmentResource($this->whenLoaded('department')),
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,

@@ -78,7 +78,7 @@
       <div class="detail-row"><span class="detail-label">Reference</span><span class="detail-value">#{{ $report->id }}</span></div>
       <div class="detail-row"><span class="detail-label">Reported by</span><span class="detail-value">{{ $report->user->name }}</span></div>
       <div class="detail-row"><span class="detail-label">Submitted</span><span class="detail-value">{{ $report->created_at->format('d M Y, h:i A') }}</span></div>
-      <div class="detail-row"><span class="detail-label">Category</span><span class="detail-value">{{ $report->category->name }}</span></div>
+      <div class="detail-row"><span class="detail-label">Category</span><span class="detail-value">{{ $report->category?->name ?? 'Uncategorized' }}</span></div>
       <div class="detail-row"><span class="detail-label">Votes</span><span class="detail-value">{{ $report->upvotes_count }} citizens</span></div>
       <div class="detail-row"><span class="detail-label">Department</span><span class="detail-value">{{ $report->department?->name ?? 'Unassigned' }}</span></div>
       <div class="detail-row">

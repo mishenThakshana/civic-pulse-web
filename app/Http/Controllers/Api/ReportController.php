@@ -42,7 +42,7 @@ class ReportController extends Controller
 
         $report = Report::create([
             'user_id' => $request->user()->id,
-            'category_id' => $data['category_id'],
+            'category_id' => $data['category_id'] ?? null,
             'title' => Str::limit($data['description'], 60),
             'description' => $data['description'],
             'latitude' => $data['latitude'],

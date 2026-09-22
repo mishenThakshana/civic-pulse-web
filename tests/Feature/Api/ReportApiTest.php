@@ -41,13 +41,30 @@ test('an approved citizen can submit a report with a photo and location', functi
     expect($report->upvotes()->first()->user_id)->toBe($citizen->id);
 });
 
-test('submitting a report requires a category, description, location, address and photo', function () {
+test('submitting a report requires a description, location, address and photo, but not a category', function () {
     $citizen = User::factory()->approved()->create();
 
     $response = $this->actingAs($citizen, 'sanctum')->postJson('/api/v1/reports', []);
 
     $response->assertUnprocessable()
-        ->assertJsonValidationErrors(['category_id', 'description', 'latitude', 'longitude', 'address', 'photo']);
+        ->assertJsonValidationErrors(['description', 'latitude', 'longitude', 'address', 'photo'])
+        ->assertJsonMissingValidationErrors(['category_id']);
+});
+
+test('a citizen can submit a report without a category', function () {
+    $citizen = User::factory()->approved()->create();
+
+    $response = $this->actingAs($citizen, 'sanctum')->postJson('/api/v1/reports', [
+        'description' => 'Streetlight has been flickering for a week.',
+        'latitude' => 6.8412,
+        'longitude' => 79.8731,
+        'address' => 'Galle Road, near the Moratuwa junction',
+        'photo' => UploadedFile::fake()->image('streetlight.jpg'),
+    ]);
+
+    $response->assertCreated()->assertJsonPath('data.category', null);
+
+    expect(Report::first()->category_id)->toBeNull();
 });
 
 test('a citizen can list nearby reports sorted by votes', function () {

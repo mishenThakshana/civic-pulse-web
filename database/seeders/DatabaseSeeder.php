@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
-use App\Models\Department;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -19,19 +17,9 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@civicpulse.test',
         ]);
 
-        foreach (['Road damage', 'Drainage', 'Lighting', 'Waste Management', 'Public Safety', 'Water Supply', 'Other'] as $name) {
-            Category::firstOrCreate(['name' => $name]);
-        }
-
-        foreach ([
-            ['name' => 'Roads and Highways', 'contact_email' => 'roads@council.lk'],
-            ['name' => 'Drainage', 'contact_email' => 'drainage@council.lk'],
-            ['name' => 'Electrical', 'contact_email' => 'electrical@council.lk'],
-            ['name' => 'Waste Management', 'contact_email' => 'waste@council.lk'],
-            ['name' => 'Parks and Recreation', 'contact_email' => 'parks@council.lk'],
-            ['name' => 'Water Board Liaison', 'contact_email' => 'water@council.lk'],
-        ] as $department) {
-            Department::firstOrCreate(['name' => $department['name']], $department);
-        }
+        $this->call([
+            CategorySeeder::class,
+            DepartmentSeeder::class,
+        ]);
     }
 }
