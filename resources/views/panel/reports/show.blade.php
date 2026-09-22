@@ -28,19 +28,29 @@
   <div>
     <div class="report-card">
       <div class="report-card-title">Reported Issue</div>
-      <img src="{{ asset('storage/'.$report->photo_path) }}" alt="Photo for report #{{ $report->id }}" class="report-photo" />
+      <button type="button" data-modal-open="reportPhotoModal" style="all:unset; cursor:zoom-in; display:block; width:100%;">
+        <img src="{{ asset('storage/'.$report->photo_path) }}" alt="Photo for report #{{ $report->id }}" class="report-photo" />
+      </button>
       <p style="font-size:13px; color:var(--text); line-height:1.6;">{{ $report->description }}</p>
     </div>
 
     <div class="report-card">
       <div class="report-card-title">Location</div>
+      <div class="detail-row"><span class="detail-label">Address</span><span class="detail-value">{{ $report->address ?? 'Not provided' }}</span></div>
       <div class="detail-row"><span class="detail-label">Coordinates</span><span class="detail-value">{{ number_format($report->latitude, 5) }}, {{ number_format($report->longitude, 5) }}</span></div>
       <div class="detail-row">
         <span class="detail-label">Map</span>
         <span class="detail-value">
-          <a href="https://www.openstreetmap.org/?mlat={{ $report->latitude }}&mlon={{ $report->longitude }}#map=17/{{ $report->latitude }}/{{ $report->longitude }}" target="_blank" rel="noopener" style="color:var(--accent);">Open in OpenStreetMap</a>
+          <a href="https://www.google.com/maps/search/?api=1&query={{ $report->latitude }},{{ $report->longitude }}" target="_blank" rel="noopener" style="color:var(--accent);">Open in Google Maps</a>
         </span>
       </div>
+    </div>
+
+    <div class="report-card">
+      <div class="report-card-title">Contact Information</div>
+      <div class="detail-row"><span class="detail-label">Reporter</span><span class="detail-value">{{ $report->user->name }}</span></div>
+      <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">{{ $report->contact_phone ?? $report->user->phone ?? 'Not provided' }}</span></div>
+      <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">{{ $report->user->email }}</span></div>
     </div>
 
     <div class="report-card">
@@ -63,7 +73,9 @@
               <p class="timeline-note">{{ $entry->note }}</p>
             @endif
             @if ($entry->photo_path)
-              <img src="{{ asset('storage/'.$entry->photo_path) }}" alt="Progress photo" class="timeline-photo" />
+              <button type="button" data-modal-open="timelinePhotoModal{{ $entry->id }}" style="all:unset; cursor:zoom-in; display:block;">
+                <img src="{{ asset('storage/'.$entry->photo_path) }}" alt="Progress photo" class="timeline-photo" />
+              </button>
             @endif
             <div class="timeline-meta">{{ $entry->created_at->format('d M Y, h:i A') }}</div>
           </div>
@@ -76,7 +88,6 @@
     <div class="report-card">
       <div class="report-card-title">Details</div>
       <div class="detail-row"><span class="detail-label">Reference</span><span class="detail-value">#{{ $report->id }}</span></div>
-      <div class="detail-row"><span class="detail-label">Reported by</span><span class="detail-value">{{ $report->user->name }}</span></div>
       <div class="detail-row"><span class="detail-label">Submitted</span><span class="detail-value">{{ $report->created_at->format('d M Y, h:i A') }}</span></div>
       <div class="detail-row"><span class="detail-label">Category</span><span class="detail-value">{{ $report->category?->name ?? 'Uncategorized' }}</span></div>
       <div class="detail-row"><span class="detail-label">Votes</span><span class="detail-value">{{ $report->upvotes_count }} citizens</span></div>
@@ -130,5 +141,23 @@
     </div>
   </div>
 </div>
+
+<div class="modal-overlay modal-overlay--photo" id="reportPhotoModal">
+  <div class="modal modal--photo">
+    <button class="modal-close" data-modal-close aria-label="Close">&times;</button>
+    <img src="{{ asset('storage/'.$report->photo_path) }}" alt="Photo for report #{{ $report->id }}" />
+  </div>
+</div>
+
+@foreach ($report->statusHistory as $entry)
+  @if ($entry->photo_path)
+    <div class="modal-overlay modal-overlay--photo" id="timelinePhotoModal{{ $entry->id }}">
+      <div class="modal modal--photo">
+        <button class="modal-close" data-modal-close aria-label="Close">&times;</button>
+        <img src="{{ asset('storage/'.$entry->photo_path) }}" alt="Progress photo" />
+      </div>
+    </div>
+  @endif
+@endforeach
 
 @endsection

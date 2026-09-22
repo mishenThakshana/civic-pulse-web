@@ -21,6 +21,7 @@ test('an approved citizen can submit a report with a photo and location', functi
         'latitude' => 6.8412,
         'longitude' => 79.8731,
         'address' => 'Galle Road, near the Moratuwa junction',
+        'contact_phone' => '0771234567',
         'photo' => UploadedFile::fake()->image('pothole.jpg'),
     ]);
 
@@ -28,6 +29,7 @@ test('an approved citizen can submit a report with a photo and location', functi
         ->assertJsonPath('data.status', 'open')
         ->assertJsonPath('data.category.id', $category->id)
         ->assertJsonPath('data.address', 'Galle Road, near the Moratuwa junction')
+        ->assertJsonPath('data.contact_phone', '0771234567')
         ->assertJsonPath('data.votes_count', 1)
         ->assertJsonPath('data.voted_by_me', true);
 
@@ -41,13 +43,13 @@ test('an approved citizen can submit a report with a photo and location', functi
     expect($report->upvotes()->first()->user_id)->toBe($citizen->id);
 });
 
-test('submitting a report requires a description, location, address and photo, but not a category', function () {
+test('submitting a report requires a description, location, address, contact phone and photo, but not a category', function () {
     $citizen = User::factory()->approved()->create();
 
     $response = $this->actingAs($citizen, 'sanctum')->postJson('/api/v1/reports', []);
 
     $response->assertUnprocessable()
-        ->assertJsonValidationErrors(['description', 'latitude', 'longitude', 'address', 'photo'])
+        ->assertJsonValidationErrors(['description', 'latitude', 'longitude', 'address', 'contact_phone', 'photo'])
         ->assertJsonMissingValidationErrors(['category_id']);
 });
 
@@ -59,6 +61,7 @@ test('a citizen can submit a report without a category', function () {
         'latitude' => 6.8412,
         'longitude' => 79.8731,
         'address' => 'Galle Road, near the Moratuwa junction',
+        'contact_phone' => '0771234567',
         'photo' => UploadedFile::fake()->image('streetlight.jpg'),
     ]);
 

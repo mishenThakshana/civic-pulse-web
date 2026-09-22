@@ -48,6 +48,7 @@ class ReportController extends Controller
             'latitude' => $data['latitude'],
             'longitude' => $data['longitude'],
             'address' => $data['address'],
+            'contact_phone' => $data['contact_phone'],
             'photo_path' => $photoPath,
             'status' => ReportStatus::Open,
         ]);

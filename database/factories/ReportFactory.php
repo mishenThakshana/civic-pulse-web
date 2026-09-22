@@ -32,6 +32,7 @@ class ReportFactory extends Factory
             'latitude' => fake()->latitude(5.9, 9.9),
             'longitude' => fake()->longitude(79.5, 81.9),
             'address' => fake()->streetAddress(),
+            'contact_phone' => fake()->phoneNumber(),
             'photo_path' => 'report-photos/'.fake()->uuid().'.jpg',
             'status' => ReportStatus::Open,
         ];

@@ -28,6 +28,7 @@ class StoreReportRequest extends FormRequest
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'address' => ['required', 'string', 'max:255'],
+            'contact_phone' => ['required', 'string', 'max:20'],
             'photo' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:6144'],
         ];
     }

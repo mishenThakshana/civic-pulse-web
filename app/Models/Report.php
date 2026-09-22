@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'user_id', 'category_id', 'department_id', 'title', 'description',
-    'latitude', 'longitude', 'address', 'photo_path', 'status',
+    'latitude', 'longitude', 'address', 'contact_phone', 'photo_path', 'status',
 ])]
 class Report extends Model
 {

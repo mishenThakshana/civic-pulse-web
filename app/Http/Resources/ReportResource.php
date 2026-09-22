@@ -23,6 +23,7 @@ class ReportResource extends JsonResource
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'address' => $this->address,
+            'contact_phone' => $this->contact_phone,
             'photo_url' => asset('storage/'.$this->photo_path),
             'status' => $this->status->value,
             'votes_count' => (int) ($this->upvotes_count ?? $this->upvotes()->count()),
