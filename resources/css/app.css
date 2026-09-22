@@ -1107,15 +1107,24 @@ input, select, textarea {
   border-radius: 6px;
 }
 
-.modal--photo .modal-close {
-  position: absolute;
-  top: -36px;
-  right: 0;
+.modal-overlay--photo .modal-close {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 210;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
   font-size: 26px;
+  line-height: 1;
 }
 
-.modal--photo .modal-close:hover { color: #fff; opacity: 0.8; }
+.modal-overlay--photo .modal-close:hover { color: #fff; background: rgba(255, 255, 255, 0.22); }
 
 .priority-score {
   display: inline-flex;

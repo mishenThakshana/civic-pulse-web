@@ -162,6 +162,18 @@
       const modal = closer.closest('.modal-overlay');
       if (modal) modal.classList.remove('is-open');
     }
+
+    // Clicking the dark backdrop itself (not the modal box inside it) closes it too.
+    if (e.target.classList.contains('modal-overlay')) {
+      e.target.classList.remove('is-open');
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.modal-overlay.is-open').forEach(function (modal) {
+      modal.classList.remove('is-open');
+    });
   });
 </script>
 </body>
