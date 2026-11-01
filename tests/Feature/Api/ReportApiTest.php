@@ -4,11 +4,37 @@ use App\Enums\ReportStatus;
 use App\Models\Category;
 use App\Models\Report;
 use App\Models\User;
+use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+
+function aiAnalysis(bool $isSpam, array $reasons = []): array
+{
+    return [
+        'spam' => ['is_suspicious' => $isSpam, 'probability' => $isSpam ? 0.95 : 0.03, 'reasons' => $reasons],
+        'requires_human_review' => $isSpam,
+    ];
+}
+
+function validReportPayload(): array
+{
+    return [
+        'description' => 'Large pothole near the junction, dangerous for motorcycles.',
+        'latitude' => 6.8412,
+        'longitude' => 79.8731,
+        'address' => 'Galle Road, near the Moratuwa junction',
+        'contact_phone' => '0771234567',
+        'photo' => UploadedFile::fake()->image('pothole.jpg'),
+    ];
+}
 
 beforeEach(function () {
     Storage::fake('public');
+    config(['services.civic_ai.url' => 'http://ai.test', 'services.civic_ai.enabled' => true, 'services.civic_ai.fail_open' => false]);
+    // Tests override $this->aiResponse to change what the fake AI service returns.
+    $this->aiResponse = Http::response(aiAnalysis(false));
+    Http::fake(['ai.test/*' => fn () => $this->aiResponse]);
 });
 
 test('an approved citizen can submit a report with a photo and location', function () {
@@ -130,4 +156,51 @@ test('the categories list is available to signed in citizens', function () {
     $response = $this->actingAs($citizen, 'sanctum')->getJson('/api/v1/categories');
 
     $response->assertOk()->assertJsonCount(3, 'data');
+});
+
+test('a report is screened by the AI service before it is stored', function () {
+    $citizen = User::factory()->approved()->create();
+
+    $this->actingAs($citizen, 'sanctum')->post('/api/v1/reports', validReportPayload(), ['Accept' => 'application/json'])
+        ->assertCreated();
+
+    Http::assertSent(fn (Request $request) => $request->url() === 'http://ai.test/api/v1/analyze'
+        && $request->isMultipart()
+        && collect($request->data())->pluck('name')->contains('image')
+        && collect($request->data())->firstWhere('name', 'description')['contents'] === 'Large pothole near the junction, dangerous for motorcycles.');
+});
+
+test('a report flagged as spam by the AI service is rejected and nothing is stored', function () {
+    $this->aiResponse = Http::response(aiAnalysis(true, ['advertisement', 'unrelated_image']));
+    $citizen = User::factory()->approved()->create();
+
+    $this->actingAs($citizen, 'sanctum')->post('/api/v1/reports', validReportPayload(), ['Accept' => 'application/json'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['screening'])
+        ->assertJsonPath('screening.reasons', ['advertisement', 'unrelated_image']);
+
+    expect(Report::count())->toBe(0);
+    expect(Storage::disk('public')->allFiles())->toBeEmpty();
+});
+
+test('a report is refused when the AI service is unavailable', function () {
+    $this->aiResponse = Http::response(['error' => 'down'], 500);
+    $citizen = User::factory()->approved()->create();
+
+    $this->actingAs($citizen, 'sanctum')->post('/api/v1/reports', validReportPayload(), ['Accept' => 'application/json'])
+        ->assertServiceUnavailable()
+        ->assertJsonValidationErrors(['screening']);
+
+    expect(Report::count())->toBe(0);
+});
+
+test('a report is accepted without screening when the AI service is unavailable and fail-open is enabled', function () {
+    config(['services.civic_ai.fail_open' => true]);
+    $this->aiResponse = Http::response(['error' => 'down'], 500);
+    $citizen = User::factory()->approved()->create();
+
+    $this->actingAs($citizen, 'sanctum')->post('/api/v1/reports', validReportPayload(), ['Accept' => 'application/json'])
+        ->assertCreated();
+
+    expect(Report::count())->toBe(1);
 });

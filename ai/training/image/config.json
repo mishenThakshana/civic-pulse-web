@@ -1,0 +1,24 @@
+{
+  "_comment": "Image category model. task_type 'classify' = one label per photo (recommended first); 'detect' = bounding boxes.",
+  "task_type": "classify",
+  "classification_dataset_dir": "datasets/processed/image_classification",
+  "detection_data_yaml": "datasets/processed/image_detection/data.yaml",
+  "base_weights": {
+    "classify": "yolo11n-cls.pt",
+    "detect": "yolo11n.pt"
+  },
+  "epochs": 50,
+  "imgsz": {
+    "classify": 224,
+    "detect": 640
+  },
+  "batch": 32,
+  "patience": 10,
+  "seed": 42,
+  "output_dir": "models/image",
+  "min_images_per_class": {
+    "train": 210,
+    "val": 45,
+    "test": 45
+  }
+}

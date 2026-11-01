@@ -28,6 +28,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'civic_ai' => [
+        'enabled' => (bool) env('CIVIC_AI_ENABLED', true),
+        'url' => env('CIVIC_AI_URL', 'http://127.0.0.1:8001'),
+        'timeout' => (int) env('CIVIC_AI_TIMEOUT', 25),
+        'fail_open' => (bool) env('CIVIC_AI_FAIL_OPEN', false),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -8,12 +8,15 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
+      CIVIC_AI_URL: http://ai:8000
     volumes:
       - storage-data:/var/www/html/storage
     networks: [civicpulse]
     depends_on:
       db:
         condition: service_healthy
+      ai:
+        condition: service_started
 
   web:
     build:
@@ -35,6 +38,7 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
+      CIVIC_AI_URL: http://ai:8000
     command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
     volumes:
       - storage-data:/var/www/html/storage
@@ -49,6 +53,7 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
+      CIVIC_AI_URL: http://ai:8000
     command: ["php", "artisan", "schedule:work"]
     volumes:
       - storage-data:/var/www/html/storage
@@ -56,6 +61,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  # Report screening service (FastAPI). Internal only: Laravel calls it over the
+  # compose network, it is never exposed on the host.
+  ai:
+    build:
+      context: ai
+    image: ghcr.io/mishenthakshana/civic-pulse-ai:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - path: ai/.env
+        required: false
+    environment:
+      APP_ENV: production
+    networks: [civicpulse]
 
   db:
     image: mysql:8.0

@@ -1,0 +1,44 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Environment (secrets) ---
+.env
+.env.*
+!.env.example
+
+# --- Datasets (never commit data; may contain personal information) ---
+datasets/raw/*
+datasets/processed/*
+!datasets/raw/.gitkeep
+!datasets/processed/.gitkeep
+
+# --- Model weights / artefacts ---
+models/*
+!models/README_MODELS.txt
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.joblib
+*.pkl
+*.bin
+runs/
+reports/
+
+# --- Hugging Face / Ultralytics caches ---
+.cache/
+hf_cache/
+
+# --- OS / editors ---
+.DS_Store
+.idea/
+.vscode/

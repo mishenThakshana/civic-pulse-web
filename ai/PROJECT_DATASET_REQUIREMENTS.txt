@@ -1,0 +1,581 @@
+===============================================================================
+ CIVI PULSE AI - PROJECT DATASET REQUIREMENTS
+===============================================================================
+
+Status      : NO DATASET HAS BEEN SELECTED OR COLLECTED YET.
+              No model in this repository has been trained.
+Audience    : project team, annotators, supervisors, reviewers.
+Applies to  : everything under civi-pulse/ai/
+
+This document explains every dataset the Civi Pulse AI service will need,
+how it must be structured, how it must be labelled, how it must be split, and
+how personal data must be handled. The training scripts in ai/scripts/ check
+datasets against the structures described here.
+
+Contents
+   0. Overview and folder layout
+   1. Image dataset (issue category)
+   2. Text dataset (issue category, multilingual)
+   3. Spam dataset
+   4. Severity dataset
+   5. Image/text consistency dataset
+   6. Duplicate report dataset
+   7. Multilingual dataset (English, Sinhala, Tamil)
+   8. Sri Lankan data and the Sri Lankan evaluation set
+   9. Train / validation / test splits
+  10. Annotation guidelines
+  11. Privacy and personal information
+  12. Recommended dataset sizes
+  13. Dataset versioning and documentation checklist
+
+
+-------------------------------------------------------------------------------
+ 0. OVERVIEW AND FOLDER LAYOUT
+-------------------------------------------------------------------------------
+
+A Civi Pulse report contains a photo, a free-text description, latitude,
+longitude, a report id and (in the backend) a submission time. The AI service
+must eventually predict, per report:
+
+  issue category + confidence | spam probability | severity (low/medium/high)
+  image-text consistency      | duplicate probability | overall validity score
+
+Each prediction needs its own labelled data. One well-annotated collection of
+real reports can serve several tasks at once (a single report can carry a
+category, severity and spam label), but pair-based tasks (consistency,
+duplicates) need additional pair files.
+
+Canonical taxonomy (must match app/schemas/report.py -> IssueCategory):
+
+  pothole                  a hole/depression in a road surface
+  road_damage              cracks, broken/eroded edges, collapsed surface
+                           (anything road-surface related that is NOT a pothole)
+  garbage                  dumped/overflowing waste, litter piles
+  flooding                 standing or flowing water on roads/public areas
+  blocked_drain            clogged, overflowing or broken drains/culverts
+  broken_street_light      street lamp not working, damaged or fallen
+  fallen_tree              fallen tree/large branch, including on lines/roads
+  damaged_sign             missing, bent, faded or fallen road/public signs
+  damaged_public_property  benches, bus shelters, railings, walls, playgrounds
+  other                    a genuine public issue that fits none of the above
+
+Raw data lives in datasets/raw/ exactly as received (never edited).
+Cleaned, de-identified, split data lives in datasets/processed/:
+
+  datasets/processed/
+    image_classification/{train,val,test}/<category>/<image_id>.jpg
+    image_detection/
+        data.yaml
+        images/{train,val,test}/<image_id>.jpg
+        labels/{train,val,test}/<image_id>.txt
+    text/{train,val,test}.csv
+    spam/{train,val,test}.csv
+    severity/{train,val,test}.csv
+    consistency/{train,val,test}.csv
+    duplicate/{train,val,test}.csv
+    sri_lanka_eval/            (evaluation ONLY - see section 8)
+
+All CSV files: UTF-8 (no BOM), comma separated, header row, one row per
+example. Sinhala and Tamil text must be stored as Unicode (not legacy
+FM-Abhaya/Bamini-style font encodings).
+
+Neither datasets/ nor models/ content is ever committed to git.
+
+
+-------------------------------------------------------------------------------
+ 1. IMAGE DATASET (ISSUE CATEGORY)
+-------------------------------------------------------------------------------
+
+Purpose
+  Train the YOLO image model (IMAGE_MODEL_PATH) to recognise the issue in a
+  report photo.
+
+Required images
+  * Real photos of public infrastructure problems for all 10 categories,
+    taken the way citizens take them: phone cameras, street level, varied
+    angles, distances, lighting (day, dusk, night, rain), partial occlusion.
+  * Hard negatives for "other": genuine civic issues outside the taxonomy.
+  * Realistic "not an issue" photos (normal roads, selfies, screenshots,
+    memes, indoor photos) are needed for the SPAM and CONSISTENCY tasks; do
+    not put them into infrastructure categories.
+  * Avoid near-identical burst shots; keep at most 1-2 photos per physical
+    issue per split (see section 9 - grouping).
+
+Image formats
+  * JPEG, PNG or WebP (the API accepts exactly these).
+  * Minimum 320 px on the shorter side; 640-1920 px preferred.
+  * RGB. Apply EXIF orientation, then strip EXIF metadata (GPS!) before the
+    image enters datasets/processed/.
+  * No watermarks, collages, or heavy filters where avoidable.
+
+Classification vs object detection
+  Option A - Image classification (RECOMMENDED FIRST STEP)
+    * One label per image = the main issue shown.
+    * Cheap to annotate; directly produces the category + confidence the API
+      returns. Uses YOLO "-cls" models.
+    * Layout: image_classification/{split}/<category>/<image_id>.jpg
+  Option B - Object detection (LATER, if needed)
+    * Bounding boxes around every instance (e.g. each pothole).
+    * Enables counting/size estimates for severity and multi-issue photos,
+      but costs roughly 5-10x more annotation time.
+    * YOLO format: one .txt per image, one line per box:
+        <class_index> <x_center> <y_center> <width> <height>
+      all coordinates normalised to 0-1; class_index follows the category
+      order in data.yaml (use the taxonomy order above).
+    * Tools: CVAT, Label Studio, Roboflow (export "YOLO").
+  The service supports both (app/models/image_model.py handles
+  task=classify and task=detect).
+
+Annotation requirements
+  * category (one of the 10 labels) - required.
+  * annotator_id, annotation_date, and "uncertain" flag - recommended.
+  * For detection: tight boxes, box every visible instance, skip instances
+    smaller than ~16 px.
+  * Record provenance per image in a manifest CSV:
+      image_id, source, license, collected_at, district, category, split
+
+Recommended sample counts  (see section 12 for all tasks)
+  Classification: minimum 200 images per category for training
+                  (~2,000 train total), target 1,000+ per category.
+  Detection:      minimum 300 annotated boxes per category, target 1,500+.
+
+Split
+  70% train / 15% validation / 15% test, stratified by category and
+  grouped by physical location (section 9).
+
+
+-------------------------------------------------------------------------------
+ 2. TEXT DATASET (ISSUE CATEGORY, MULTILINGUAL)
+-------------------------------------------------------------------------------
+
+Purpose
+  Fine-tune the multilingual text classifier (TEXT_MODEL_NAME) and provide
+  data for semantic similarity/embeddings.
+
+File: datasets/processed/text/{train,val,test}.csv
+
+  column        required  description
+  ------------  --------  ------------------------------------------------
+  report_id     yes       unique id (not the backend's real id if that
+                          could identify a user; use a pseudonymous id)
+  description   yes       citizen's text, de-identified (section 11)
+  category      yes       one of the 10 taxonomy labels
+  language      yes       en | si | ta   (the dominant language of the text)
+  severity      yes       low | medium | high  (see section 4)
+  script        optional  native | romanised | mixed
+                          (e.g. "Singlish" = romanised Sinhala)
+  source        optional  where the text came from
+  annotator_id  optional
+
+Content requirements
+  * Real, natural citizen wording: short and long, informal, with typos,
+    abbreviations, code-mixing ("road eke loku wala ekak"), emojis.
+  * Descriptions that mention places generically ("near the school") are
+    fine; remove house numbers, names and phone numbers.
+  * Each category must appear in each language (section 7).
+
+
+-------------------------------------------------------------------------------
+ 3. SPAM DATASET
+-------------------------------------------------------------------------------
+
+Purpose
+  Train the spam model (SPAM_MODEL_PATH). The AI service only FLAGS
+  suspected spam for human review; it NEVER deletes reports. The dataset must
+  therefore teach the model to be conservative with genuine reports.
+
+File: datasets/processed/spam/{train,val,test}.csv
+
+  column        required  description
+  ------------  --------  ------------------------------------------------
+  report_id     yes
+  description   yes
+  is_spam       yes       1 = spam/abuse, 0 = legitimate
+  spam_type     yes       legitimate | irrelevant | promotional | nonsense |
+                          abusive | duplicate_like | other
+  language      recommended  en | si | ta
+  image         optional  relative path to the photo (enables image features)
+  latitude      optional  (enables metadata features)
+  longitude     optional
+
+  Consistency rule (checked by scripts/train_spam.py):
+    spam_type == legitimate  <=>  is_spam == 0
+
+Examples (illustrative, English; collect equivalents in Sinhala and Tamil)
+  legitimate      "Large pothole near the bus stand, bikes swerving into traffic"
+                  "Garbage not collected for two weeks on Temple Road"
+  irrelevant      "My neighbour's dog keeps barking"          (not public infra)
+                  "When is the next election?"
+  promotional     "Best price tiles!!! Call 07X XXX XXXX www.example.lk"
+                  "Earn money from home, WhatsApp now"
+  nonsense        "asdfgh jkl", "..........", "test test test", emoji-only
+  abusive         insults, harassment or hate aimed at people/officials with
+                  no actionable issue (do not reproduce real slurs in docs;
+                  keep them only in the protected dataset)
+  duplicate_like  the SAME user flooding copy-pasted or trivially edited
+                  submissions (spam behaviour).
+                  NOTE: two DIFFERENT citizens reporting the same pothole is
+                  NOT spam - label it legitimate; it belongs in the duplicate
+                  dataset (section 6).
+
+Guidance
+  * Include hard legitimate cases: very short but genuine reports ("street
+    light off"), angry but genuine complaints, photos taken at night.
+  * Target spam rate in training data: 20-40% (real traffic is likely lower;
+    keep the real rate in the test set if known and document it).
+
+
+-------------------------------------------------------------------------------
+ 4. SEVERITY DATASET
+-------------------------------------------------------------------------------
+
+Purpose
+  Train the severity model (SEVERITY_MODEL_NAME, text-only first; a later
+  multimodal model can also use the photo and category).
+
+Levels
+  low     cosmetic/minor, no safety risk, no disruption
+          (faded sign, small crack, single piece of litter)
+  medium  causes disruption or will worsen, limited immediate danger
+          (pothole on a busy road, overflowing bin, blocked drain, one
+          street light out)
+  high    immediate risk to safety/health or severe disruption
+          (deep pothole on a main road, fallen tree blocking a road, exposed
+          live wires, flooding of houses/roads, sewage overflow)
+
+Files
+  * text/{split}.csv already carries the `severity` column (text model).
+  * severity/{split}.csv for the future multimodal model:
+
+  column        required  description
+  ------------  --------  ------------------------------------------------
+  report_id     yes
+  description   yes
+  image         yes       relative path to the photo
+  severity      yes       low | medium | high
+  category      recommended
+  language      recommended
+
+Guidance
+  Annotators must judge severity from what is SHOWN and DESCRIBED, not from
+  how angry the text sounds. Use the decision rules in section 10.
+
+
+-------------------------------------------------------------------------------
+ 5. IMAGE/TEXT CONSISTENCY DATASET
+-------------------------------------------------------------------------------
+
+Purpose
+  Measure (and later train) whether the photo and description refer to the
+  same issue. Example:
+    image = pothole,             text = "Large pothole near the school"
+      -> consistent
+    image = broken street light, text = "Garbage dumped beside the road"
+      -> NOT consistent
+
+File: datasets/processed/consistency/{train,val,test}.csv
+
+  column          required  description
+  --------------  --------  ----------------------------------------------
+  pair_id         yes
+  image           yes       relative path
+  description     yes
+  is_consistent   yes       1 = same issue, 0 = different/unrelated
+  pair_type       yes       natural | synthetic_mismatch | hard_mismatch
+  image_category  recommended
+  text_category   recommended
+  language        recommended
+
+Required examples
+  * matching image + description: real reports whose photo and text agree
+    (natural). This should be the majority of real data.
+  * non-matching image + description:
+      - synthetic_mismatch: pair a photo with a description from a DIFFERENT
+        category (easy negatives; cheap to generate automatically).
+      - hard_mismatch: related but different issues (pothole photo +
+        "road cracks"; blocked drain photo + "flooding") and real mismatched
+        reports found during annotation.
+  * Aim for ~50% consistent / 50% inconsistent in train and val.
+  * Synthetic pairs must be built WITHIN a split (never pair a train image
+    with a test description).
+
+
+-------------------------------------------------------------------------------
+ 6. DUPLICATE REPORT DATASET
+-------------------------------------------------------------------------------
+
+Purpose
+  Train a duplicate-pair classifier to replace the hand-set weights in
+  app/services/duplicate_service.py, and choose DUPLICATE_THRESHOLD,
+  DUPLICATE_RADIUS_METERS and DUPLICATE_TIME_WINDOW_HOURS.
+
+Definition
+  Two reports are duplicates if they describe the SAME physical issue
+  instance (same pothole, same fallen tree), regardless of who reported it.
+  Two different potholes 30 m apart are NOT duplicates.
+
+File: datasets/processed/duplicate/{train,val,test}.csv
+
+  column                    required  description
+  ------------------------  --------  ------------------------------------
+  report_a                  yes       report id
+  report_b                  yes       report id
+  is_duplicate              yes       1 / 0
+  distance_between_reports  recommended  metres (haversine)
+  time_difference_hours     recommended  |created_at_a - created_at_b|
+  text_similarity           optional  computed by the pipeline, 0-1
+  image_similarity          optional  computed by the pipeline, 0-1
+  same_category             optional  1 / 0
+  Also keep the underlying reports (text, image path, lat/lon, time) in a
+  reports file so features can be recomputed when models change.
+
+Required examples
+  * positives: the same issue reported by different people, from different
+    angles, at different times, in different languages.
+  * hard negatives: same category, very close location, different instance
+    (two potholes on one road); same place, different issue.
+  * easy negatives: far apart or different category.
+  * Suggested ratio in train: 1 positive : 3 negatives.
+
+Collection tip
+  Build candidate pairs automatically (same category within e.g. 300 m and
+  30 days), then have humans confirm each pair.
+
+
+-------------------------------------------------------------------------------
+ 7. MULTILINGUAL DATASET (ENGLISH, SINHALA, TAMIL)
+-------------------------------------------------------------------------------
+
+Civi Pulse serves Sri Lankan citizens who will write in English, Sinhala and
+Tamil - and frequently in mixtures and romanised forms. A model trained
+mostly on English will silently perform worse for Sinhala and Tamil speakers,
+which is a fairness problem as well as an accuracy problem.
+
+Requirements
+  * Every text-based dataset (text, spam, severity, consistency, duplicate)
+    must contain all three languages in train, val AND test.
+  * Target share per language: at least 25% each for Sinhala and Tamil in
+    the test set, even if real traffic is English-heavy, so that per-language
+    metrics are statistically meaningful.
+  * Collect native-script text AND romanised/code-mixed text
+    (Singlish/Tanglish); record this in the optional `script` column.
+  * Do NOT create Sinhala/Tamil data only by machine translation of English.
+    Translation may be used to bootstrap TRAINING data, but must be marked
+    (source = machine_translation) and the val/test sets must be natively
+    written by speakers.
+  * Annotators must be fluent in the language they label.
+  * Report every metric per language (en/si/ta) and overall.
+  * Store text as Unicode NFC; preserve ZERO WIDTH JOINER in Sinhala
+    (required for conjuncts such as "ශ්‍රී").
+
+
+-------------------------------------------------------------------------------
+ 8. SRI LANKAN DATA AND THE SRI LANKAN EVALUATION SET
+-------------------------------------------------------------------------------
+
+Why public international datasets alone are insufficient
+  * Visual domain gap: road construction, drain designs, street furniture,
+    signage, vegetation, monsoon flooding, three-wheelers and lighting in Sri
+    Lanka differ from the (mostly European/North American/Indian) roads in
+    public pothole/garbage datasets.
+  * Language gap: public civic-complaint datasets are almost entirely
+    English; Sinhala and Tamil civic text is essentially unavailable.
+  * Label mismatch: public datasets use different taxonomies (e.g. only
+    "pothole" vs "crack"); they rarely include severity, spam, consistency
+    or duplicate labels.
+  * Behaviour gap: how Sri Lankan citizens photograph and describe problems,
+    and what spam looks like on this platform, can only be learned from
+    Sri Lankan data.
+  Public datasets are still useful for PRE-TRAINING the image model
+  (check each dataset's licence before use and record it).
+
+Sri Lankan evaluation set (datasets/processed/sri_lanka_eval/)
+  * A fixed, versioned set of real Sri Lankan reports with ALL labels
+    (category, severity, spam, consistency; duplicate pairs where possible).
+  * Covers all 10 categories, all 3 languages, urban and rural areas, and
+    multiple districts/provinces, day and night photos.
+  * NEVER used for training, fine-tuning, threshold tuning or model
+    selection. It is the final "does this work in Sri Lanka" check and the
+    number reported to stakeholders.
+  * Reports in it must not share physical issues with any training data.
+
+
+-------------------------------------------------------------------------------
+ 9. TRAIN / VALIDATION / TEST SPLITS
+-------------------------------------------------------------------------------
+
+  train       (~70%)  fit model weights
+  validation  (~15%)  choose hyper-parameters, checkpoints and thresholds
+                      (SPAM_THRESHOLD, CONSISTENCY_THRESHOLD,
+                      DUPLICATE_THRESHOLD, VALIDITY_REVIEW_THRESHOLD)
+  test        (~15%)  final, unbiased performance estimate
+
+THE TEST SET MUST REMAIN ISOLATED FROM TRAINING.
+  * Never train, tune, select thresholds or pick checkpoints on test data.
+  * Evaluate on test ONCE per final model candidate (scripts/evaluate.py).
+    If you look at test results and then change the model, the test set is
+    no longer unbiased - record this in the model card.
+  * The same report_id must never appear in more than one split
+    (scripts check this and fail with "LEAKAGE").
+  * GROUPED SPLITTING: all photos/reports of the same physical issue, and
+    all reports from the same small area and time window, must go into the
+    SAME split. Otherwise the model memorises a specific pothole and test
+    scores are inflated. Practical approach: cluster by location (~100 m)
+    + time (~30 days) and split clusters, not individual reports.
+  * Stratify by category, language and (for spam) spam_type.
+  * Freeze the split: store split assignments in a manifest and version it.
+  * Synthetic pairs (consistency/duplicate) are generated inside each split.
+
+
+-------------------------------------------------------------------------------
+ 10. ANNOTATION GUIDELINES
+-------------------------------------------------------------------------------
+
+General
+  * Each item labelled by 2 annotators; disagreements resolved by a third
+    (adjudicator). Target inter-annotator agreement: Cohen's kappa >= 0.7
+    for category and spam, >= 0.6 for severity. Re-train annotators if lower.
+  * Annotators may mark "uncertain"; uncertain items go to adjudication
+    rather than being guessed.
+  * Label what is visible/written, not assumptions about the reporter.
+  * Keep a changelog of guideline updates; re-check earlier labels after
+    changes.
+
+Category
+  1. Photo shows a clear issue -> label the photo's issue.
+  2. Several issues -> label the most prominent / most safety-relevant one
+     (and note secondary issues in a `notes` column).
+  3. pothole vs road_damage: a distinct hole/depression = pothole; cracks,
+     broken edges, surface wear = road_damage.
+  4. flooding vs blocked_drain: water spread over road/area = flooding;
+     the drain itself is the visible problem = blocked_drain.
+  5. Genuine issue outside the taxonomy -> other. Not an issue -> handled by
+     spam labels, not "other".
+
+Spam
+  * Spam = no actionable public-infrastructure content (irrelevant,
+    promotional, nonsense, abusive) OR the same user flooding copies.
+  * Angry, rude or badly written reports about a REAL issue are NOT spam.
+  * Very short genuine reports ("light not working") are NOT spam.
+  * When unsure -> legitimate + "uncertain" flag (false spam flags harm
+    citizens more than missed spam, because humans review flags anyway).
+
+Severity
+  Ask in order:
+    a) Is there an immediate risk of injury, electrocution, health hazard,
+       or is a road/access completely blocked? -> high
+    b) Does it disrupt use, affect many people, or will it clearly get
+       worse soon? -> medium
+    c) Otherwise -> low
+  Ignore exaggeration in the text if the photo clearly contradicts it (and
+  mark the pair as a consistency example).
+
+Consistency
+  * 1 if the description refers to the issue visible in the photo (even
+    loosely, e.g. "road is very bad" + pothole photo).
+  * 0 if the description refers to a different issue or is unrelated.
+  * Generic descriptions with no issue ("please fix") -> 1 if the photo
+    shows an issue, but flag as `generic_text` in notes.
+
+Duplicate reports
+  * 1 only if both reports refer to the same physical instance of the
+    issue. Use photos (landmarks, shape of the damage), location and text.
+  * Same place, different issue -> 0. Same issue type nearby but a
+    different instance -> 0.
+  * Unresolved issues re-reported weeks later ARE duplicates (the time gap
+    is recorded separately).
+
+
+-------------------------------------------------------------------------------
+ 11. PRIVACY AND PERSONAL INFORMATION
+-------------------------------------------------------------------------------
+
+Principle: collect and keep only what the models need.
+
+  * Do NOT include personal information unless it is required and properly
+    handled. This includes: faces, vehicle number plates, names, phone
+    numbers, e-mail addresses, national ID numbers, exact home addresses,
+    user account ids, device identifiers.
+  * Images: blur or crop faces and number plates before they enter
+    datasets/processed/. Strip ALL EXIF metadata (GPS, device, timestamp).
+    Exclude photos taken inside private homes.
+  * Text: replace phone numbers, e-mails, names and house numbers with
+    placeholders ([PHONE], [EMAIL], [NAME], [ADDRESS]). Keep generic
+    landmarks ("near the temple") which are useful and not personal.
+  * Location: coordinates of reports are needed for duplicate detection.
+    Store them rounded (e.g. 4 decimal places, ~11 m) unless higher
+    precision is justified; never link them to user identities.
+  * IDs: use pseudonymous report ids in datasets; keep any mapping to the
+    backend's real ids separately, access-controlled, or not at all.
+  * Consent and licence: data from the Civi Pulse platform may only be used
+    for training if the platform's terms/privacy notice allow it. Record the
+    licence of every external dataset.
+  * Storage: datasets are never committed to git, never uploaded to public
+    services, and are stored with access restricted to the project team.
+    Delete raw data after de-identification when it is no longer needed.
+  * Abusive content: store it only in the protected dataset; do not paste
+    examples into documentation, tickets or chat.
+  * The running AI service does not store reports or images and does not
+    log descriptions (app/core/logging.py).
+  * Follow Sri Lanka's Personal Data Protection Act No. 9 of 2022 and the
+    university's research-ethics requirements; obtain approval before
+    collecting data from people.
+
+
+-------------------------------------------------------------------------------
+ 12. RECOMMENDED DATASET SIZES
+-------------------------------------------------------------------------------
+
+These numbers are practical starting points based on typical fine-tuning of
+pretrained models; they are NOT mandatory. More (and more diverse) data is
+better, and quality/diversity matters more than raw count. Totals include
+all splits (70/15/15) unless noted.
+
+  task / dataset              minimum (usable baseline)      target
+  --------------------------  -----------------------------  --------------------------------
+  Image classification        ~300 images per category        1,000-1,500+ per category
+                              (~3,000 total)                  (10,000-15,000 total)
+  Image detection (optional)  ~300 boxes per category         1,500+ boxes per category
+  Text category               ~100 per category PER language  ~500 per category per language
+                              (~3,000 total)                  (~15,000 total)
+  Spam                        ~2,000 reports                  ~10,000 reports
+                              (>= 500 spam, every spam_type)  (>= 2,500 spam)
+  Severity                    ~1,500 reports                  ~6,000 reports
+                              (>= 300 per level)              (>= 1,500 per level)
+  Image/text consistency      ~2,000 pairs (50/50)            ~10,000 pairs
+  Duplicate pairs             ~1,500 pairs (>= 400 positive)  ~8,000 pairs (>= 2,000 positive)
+  Sri Lankan evaluation set   ~1,000 fully-labelled reports   ~3,000 reports
+                              (>= 30 per category per         (>= 100 per category per
+                              language where possible)        language where possible)
+
+  Notes
+  * Minimums assume starting from pretrained models (YOLO, XLM-R/LaBSE).
+  * Rare categories will be the bottleneck; plan targeted collection.
+  * For any class, fewer than ~30 test examples makes its metrics unreliable.
+
+
+-------------------------------------------------------------------------------
+ 13. DATASET VERSIONING AND DOCUMENTATION CHECKLIST
+-------------------------------------------------------------------------------
+
+For every dataset version, record (e.g. datasets/processed/<task>/DATASHEET.txt):
+  [ ] version, date, owner
+  [ ] sources and licences
+  [ ] collection method, date range, geographic coverage (districts)
+  [ ] counts per split x category x language (scripts print these)
+  [ ] annotation guideline version, annotator count, agreement scores
+  [ ] de-identification steps applied
+  [ ] known gaps and biases
+  [ ] split method (grouping/stratification) and random seed
+  [ ] checksum/manifest of files
+
+Validate structure before training:
+  python scripts/train_image.py --validate-only
+  python scripts/train_text.py --task category --validate-only
+  python scripts/train_text.py --task severity --validate-only
+  python scripts/train_spam.py --validate-only
+  python scripts/evaluate.py --list-test-sets
+
+===============================================================================
+ END
+===============================================================================

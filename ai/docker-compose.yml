@@ -1,0 +1,31 @@
+# Civi Pulse AI service (independent of the app/ and web/ stacks).
+#   docker compose up --build
+#   -> http://localhost:8000/docs
+services:
+  ai:
+    build:
+      context: .
+      args:
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+    image: civi-pulse-ai:local
+    container_name: civi-pulse-ai
+    ports:
+      - "${AI_HOST_PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+    volumes:
+      # Trained weights are mounted read-only; nothing is baked into the image.
+      - ./models:/app/models:ro
+    restart: unless-stopped
+    # --- Optional GPU (requires NVIDIA Container Toolkit and a CUDA build) ---
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]

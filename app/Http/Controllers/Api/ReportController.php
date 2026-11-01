@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreReportRequest;
 use App\Http\Resources\ReportResource;
 use App\Models\Report;
+use App\Services\ReportScreeningService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,9 +35,11 @@ class ReportController extends Controller
         return ReportResource::collection($query->paginate(20));
     }
 
-    public function store(StoreReportRequest $request): JsonResponse
+    public function store(StoreReportRequest $request, ReportScreeningService $screening): JsonResponse
     {
         $data = $request->validated();
+
+        $screening->screen($request->file('photo'), $data);
 
         $photoPath = $request->file('photo')->store('report-photos', 'public');
 

@@ -1,0 +1,19 @@
+{
+  "_comment": "Duplicate-pair classifier (future). Replaces the hand-set weights in app/services/duplicate_service.py.",
+  "dataset_dir": "datasets/processed/duplicate",
+  "features": [
+    "distance_between_reports",
+    "text_similarity",
+    "image_similarity",
+    "time_difference_hours",
+    "same_category"
+  ],
+  "classifier": "gradient_boosting",
+  "seed": 42,
+  "min_rows": {
+    "train": 1050,
+    "val": 225,
+    "test": 225
+  },
+  "output_path": "models/duplicate/duplicate_model.joblib"
+}

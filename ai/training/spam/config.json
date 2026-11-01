@@ -1,0 +1,21 @@
+{
+  "_comment": "Spam classifier: scikit-learn pipeline over description text + SPAM_FEATURE_COLUMNS.",
+  "dataset_dir": "datasets/processed/spam",
+  "classifier": "logistic_regression",
+  "tfidf": {
+    "analyzer": "char_wb",
+    "ngram_range": [
+      2,
+      5
+    ],
+    "min_df": 2
+  },
+  "class_weight": "balanced",
+  "seed": 42,
+  "min_rows": {
+    "train": 1400,
+    "val": 300,
+    "test": 300
+  },
+  "output_path": "models/spam/spam_model.joblib"
+}
