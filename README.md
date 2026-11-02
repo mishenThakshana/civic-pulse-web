@@ -250,7 +250,7 @@ Start from `.env.docker.example`. It differs from `.env.example` in a few Docker
 4. **deploy** *(main only)*: SSHes into the VPS and:
    - hard-resets its git clone to `origin/main`, so `docker-compose.yml`, nginx config and the rest stay in sync, not just the images;
    - rewrites `ai/.env` from the `GEMINI_API_KEY` secret;
-   - runs `docker compose pull && docker compose up -d` and `migrate --force`;
+   - pulls the new images, retrying up to 5 times with backoff because GHCR occasionally drops large layer downloads, then runs `docker compose up -d` and `migrate --force`. If the pull still fails, nothing is restarted and the previous release keeps running;
    - waits up to ~90 s for the AI service's health check, failing the deploy (with its logs) if it doesn't come up;
    - prunes old images.
 

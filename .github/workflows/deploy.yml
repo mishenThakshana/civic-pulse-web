@@ -175,7 +175,16 @@ jobs:
             # the repo secret so a rotated key is picked up on the next deploy.
             umask 077
             printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY" > ai/.env
-            docker compose pull
+            # GHCR downloads of the large AI image layers occasionally drop
+            # mid-transfer ("connection reset by peer"). Retry with backoff —
+            # layers that finished are cached, so each attempt resumes. --quiet
+            # keeps per-layer progress spam out of the Actions log.
+            for i in 1 2 3 4 5; do
+              docker compose pull --quiet && break
+              [ "$i" = 5 ] && { echo "docker compose pull failed after $i attempts"; exit 1; }
+              echo "docker compose pull failed (attempt $i/5), retrying in $((i * 15))s…"
+              sleep $((i * 15))
+            done
             docker compose up -d
             docker compose exec -T app php artisan migrate --force
             # Fail the deploy loudly if the AI screening service doesn't come up —
