@@ -165,6 +165,16 @@
       if (modal) modal.classList.remove('is-open');
     }
 
+    const copyButton = e.target.closest('[data-copy-target]');
+    if (copyButton) {
+      const source = document.getElementById(copyButton.getAttribute('data-copy-target'));
+      if (source && navigator.clipboard) {
+        navigator.clipboard.writeText(source.textContent.trim()).then(function () {
+          copyButton.textContent = 'Copied';
+        });
+      }
+    }
+
     // Clicking the dark backdrop itself (not the modal box inside it) closes it too.
     if (e.target.classList.contains('modal-overlay')) {
       e.target.classList.remove('is-open');

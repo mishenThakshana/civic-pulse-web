@@ -90,6 +90,9 @@
             @if ($entry->user)
               {{ $entry->user->name }}
               <div style="font-size:11px; font-weight:400; color:var(--text-muted);">{{ $entry->user->role->label() }}</div>
+            @elseif (($entry->properties['source'] ?? null) === 'api')
+              {{ $entry->properties['department'] ?? 'Department' }}
+              <div style="font-size:11px; font-weight:400; color:var(--text-muted);">Integration API</div>
             @else
               <span style="color:var(--text-muted);">Deleted account</span>
             @endif

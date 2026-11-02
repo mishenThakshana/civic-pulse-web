@@ -15,6 +15,14 @@ class Department extends Model
     use HasFactory;
 
     /**
+     * @return HasMany<DepartmentApiKey, $this>
+     */
+    public function apiKeys(): HasMany
+    {
+        return $this->hasMany(DepartmentApiKey::class)->latest();
+    }
+
+    /**
      * @return HasMany<Report, $this>
      */
     public function reports(): HasMany

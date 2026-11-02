@@ -2,24 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ActivityAction;
 use App\Enums\ReportStatus;
-use App\Models\ActivityLog;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Report;
-use App\Notifications\ReportStatusUpdated;
-use App\Services\PushNotificationService;
+use App\Services\ReportUpdateService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    public function __construct(private readonly PushNotificationService $push)
-    {
-        //
-    }
+    public function __construct(private readonly ReportUpdateService $reportUpdates) {}
 
     public function index(Request $request): View
     {
@@ -62,7 +56,7 @@ class ReportController extends Controller
 
     public function show(Report $report): View
     {
-        $report->load(['category', 'department', 'user', 'statusHistory.changedBy'])->loadCount('upvotes');
+        $report->load(['category', 'department', 'user', 'statusHistory.changedBy', 'statusHistory.changedByDepartment'])->loadCount('upvotes');
 
         return view('panel.reports.show', [
             'report' => $report,
@@ -80,39 +74,15 @@ class ReportController extends Controller
             'photo' => ['nullable', 'file', 'image', 'max:6144'],
         ]);
 
-        $fromStatus = $report->status;
-        $toStatus = ReportStatus::from($data['status']);
+        $report->department_id = $data['department_id'] ?? null;
 
-        $photoPath = $request->hasFile('photo')
-            ? $request->file('photo')->store('report-updates', 'public')
-            : null;
-
-        $report->update([
-            'department_id' => $data['department_id'] ?? null,
-            'status' => $toStatus,
-        ]);
-
-        $report->statusHistory()->create([
-            'from_status' => $fromStatus,
-            'to_status' => $toStatus,
-            'changed_by' => $request->user()->id,
-            'note' => $data['note'] ?? null,
-            'photo_path' => $photoPath,
-        ]);
-
-        $report->load('department');
-
-        ActivityLog::record(
-            ActivityAction::ReportUpdated,
-            $fromStatus === $toStatus
-                ? "Updated report #{$report->id} ({$toStatus->label()})."
-                : "Moved report #{$report->id} from {$fromStatus->label()} to {$toStatus->label()}.",
+        $this->reportUpdates->record(
             $report,
-            ['from_status' => $fromStatus->value, 'to_status' => $toStatus->value, 'department' => $report->department?->name],
+            ReportStatus::from($data['status']),
+            $data['note'] ?? null,
+            $request->file('photo'),
+            byUser: $request->user(),
         );
-        $notification = new ReportStatusUpdated($report);
-        $report->user->notify($notification);
-        $this->push->sendToUser($report->user, $notification->title(), $notification->body(), ['report_id' => $report->id]);
 
         return back()->with('status', "Report #{$report->id} has been updated and the citizen notified.");
     }

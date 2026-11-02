@@ -76,7 +76,7 @@ class ReportController extends Controller
 
     public function show(Report $report, Request $request): ReportResource
     {
-        $report->load(['category', 'department', 'user', 'statusHistory.changedBy'])
+        $report->load(['category', 'department', 'user', 'statusHistory.changedBy', 'statusHistory.changedByDepartment'])
             ->loadCount('upvotes')
             ->load(['upvotes' => fn ($q) => $q->where('user_id', $request->user()->id)]);
 

@@ -3,7 +3,11 @@
 namespace App\Providers;
 
 use App\Enums\UserRole;
+use App\Models\DepartmentApiKey;
 use App\Models\User;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -33,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Route::bind('citizen', fn (string $value) => User::where('role', UserRole::Citizen)->findOrFail($value));
+        RateLimiter::for('integrations', fn (Request $request) => Limit::perMinute(120)->by(
+            $request->bearerToken() ? DepartmentApiKey::hash($request->bearerToken()) : $request->ip()
+        ));
+
         Route::bind('staff', fn (string $value) => User::whereIn('role', UserRole::panelRoles())->findOrFail($value));
     }
 }

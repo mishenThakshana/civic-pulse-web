@@ -67,7 +67,7 @@
               @else
                 <span class="badge badge--amber">{{ $entry->to_status->label() }}</span>
               @endif
-              <span style="font-size:12px; font-weight:500;">{{ $entry->changedBy?->name ?? 'System' }}</span>
+              <span style="font-size:12px; font-weight:500;">{{ $entry->authorName() }}</span>
             </div>
             @if ($entry->note)
               <p class="timeline-note">{{ $entry->note }}</p>

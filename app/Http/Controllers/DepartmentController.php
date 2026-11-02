@@ -19,7 +19,7 @@ class DepartmentController extends Controller
             'reports as open_count' => fn ($q) => $q->where('status', ReportStatus::Open),
             'reports as in_progress_count' => fn ($q) => $q->where('status', ReportStatus::InProgress),
             'reports as resolved_count' => fn ($q) => $q->where('status', ReportStatus::Resolved),
-        ])->orderBy('name')->get();
+        ])->with('apiKeys.createdBy')->orderBy('name')->get();
 
         $departments->each(fn (Department $department) => $department->avg_resolution_days = Report::averageResolutionDays($department->id));
 

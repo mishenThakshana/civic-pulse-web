@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['report_id', 'from_status', 'to_status', 'changed_by', 'note', 'photo_path'])]
+#[Fillable(['report_id', 'from_status', 'to_status', 'changed_by', 'changed_by_department_id', 'note', 'photo_path'])]
 class ReportStatusHistory extends Model
 {
     protected $table = 'report_status_history';
@@ -34,5 +34,22 @@ class ReportStatusHistory extends Model
     public function changedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');
+    }
+
+    /**
+     * @return BelongsTo<Department, $this>
+     */
+    public function changedByDepartment(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'changed_by_department_id');
+    }
+
+    /**
+     * Who posted this update: a panel account, or a department's own system.
+     */
+    public function authorName(): string
+    {
+        return $this->changedBy?->name
+            ?? ($this->changedByDepartment ? "{$this->changedByDepartment->name} (via API)" : 'System');
     }
 }

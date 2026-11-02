@@ -24,6 +24,9 @@ enum ActivityAction: string
     case DepartmentUpdated = 'department.updated';
     case DepartmentDeleted = 'department.deleted';
 
+    case ApiKeyCreated = 'api_key.created';
+    case ApiKeyRevoked = 'api_key.revoked';
+
     case StaffCreated = 'staff.created';
     case StaffUpdated = 'staff.updated';
     case StaffActivated = 'staff.activated';
@@ -48,6 +51,8 @@ enum ActivityAction: string
             self::DepartmentCreated => 'Department added',
             self::DepartmentUpdated => 'Department updated',
             self::DepartmentDeleted => 'Department deleted',
+            self::ApiKeyCreated => 'API key issued',
+            self::ApiKeyRevoked => 'API key revoked',
             self::StaffCreated => 'Staff added',
             self::StaffUpdated => 'Staff updated',
             self::StaffActivated => 'Staff activated',
@@ -63,9 +68,9 @@ enum ActivityAction: string
     {
         return match ($this) {
             self::CitizenApproved, self::CitizenActivated, self::StaffActivated,
-            self::CategoryCreated, self::DepartmentCreated, self::StaffCreated => 'green',
+            self::CategoryCreated, self::DepartmentCreated, self::StaffCreated, self::ApiKeyCreated => 'green',
             self::CitizenRejected, self::CitizenDeleted, self::CitizenDeactivated,
-            self::CategoryDeleted, self::DepartmentDeleted, self::StaffDeleted, self::StaffDeactivated => 'red',
+            self::CategoryDeleted, self::DepartmentDeleted, self::StaffDeleted, self::StaffDeactivated, self::ApiKeyRevoked => 'red',
             self::ReportUpdated => 'blue',
             self::CitizenUpdated, self::CategoryUpdated, self::DepartmentUpdated, self::StaffUpdated => 'amber',
             self::SignedIn, self::SignedOut => '',

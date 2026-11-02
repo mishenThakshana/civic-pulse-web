@@ -6,12 +6,16 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DepartmentApiKeyController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\DeveloperDocsController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
+
+Route::get('/developers', [DeveloperDocsController::class, 'index'])->name('developers');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -48,6 +52,10 @@ Route::middleware(['auth', 'role:admin'])->group(function (): void {
     Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
     Route::patch('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
     Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+    Route::post('/departments/{department}/api-keys', [DepartmentApiKeyController::class, 'store'])->name('departments.api-keys.store');
+    Route::delete('/departments/{department}/api-keys/{apiKey}', [DepartmentApiKeyController::class, 'destroy'])
+        ->scopeBindings()
+        ->name('departments.api-keys.destroy');
 
     Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
     Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');

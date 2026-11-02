@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DeviceController;
+use App\Http\Controllers\Api\Integrations;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReportController;
 use Illuminate\Support\Facades\Route;
@@ -26,4 +27,19 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/devices', [DeviceController::class, 'store']);
     });
+});
+
+/*
+| Department integration API — authenticated by a per-department API key, not
+| a citizen token. Documented publicly at /developers; keep the OpenAPI spec in
+| public/openapi/integrations-v1.json in step with these routes.
+*/
+Route::prefix('integrations/v1')->middleware(['throttle:integrations', 'department.key'])->group(function (): void {
+    Route::get('/department', [Integrations\DepartmentController::class, 'show']);
+    Route::get('/categories', [Integrations\CategoryController::class, 'index']);
+    Route::get('/reports', [Integrations\ReportController::class, 'index']);
+    Route::get('/reports/{reportId}', [Integrations\ReportController::class, 'show'])->whereNumber('reportId');
+    Route::post('/reports/{reportId}/updates', [Integrations\ReportController::class, 'storeUpdate'])
+        ->whereNumber('reportId')
+        ->middleware('department.key:write');
 });

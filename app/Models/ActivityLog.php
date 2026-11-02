@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\Auth;
 
 #[Fillable(['user_id', 'action', 'description', 'subject_type', 'subject_id', 'properties', 'ip_address', 'created_at'])]
 class ActivityLog extends Model
@@ -35,7 +36,7 @@ class ActivityLog extends Model
     public static function record(ActivityAction $action, string $description, ?Model $subject = null, array $properties = [], ?User $user = null): self
     {
         return static::create([
-            'user_id' => ($user ?? auth()->user())?->id,
+            'user_id' => ($user ?? Auth::user())?->id,
             'action' => $action,
             'description' => $description,
             'subject_type' => $subject?->getMorphClass(),

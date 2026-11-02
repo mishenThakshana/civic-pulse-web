@@ -20,7 +20,7 @@ class ReportStatusHistoryResource extends JsonResource
             'to_status' => $this->to_status->value,
             'note' => $this->note,
             'photo_url' => $this->photo_path ? asset('storage/'.$this->photo_path) : null,
-            'changed_by' => $this->whenLoaded('changedBy', fn () => $this->changedBy?->name),
+            'changed_by' => $this->when($this->relationLoaded('changedBy'), fn () => $this->authorName()),
             'created_at' => $this->created_at,
         ];
     }
