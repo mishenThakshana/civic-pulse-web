@@ -26,18 +26,10 @@ test('citizens cannot access the admin panel even when approved', function () {
     $this->assertGuest();
 });
 
-test('the remaining sidebar sections still render as work in progress', function () {
+test('every sidebar section is a real page with no work-in-progress placeholders', function () {
     $admin = User::factory()->admin()->create();
 
-    foreach (['staff', 'activity-log'] as $slug) {
-        $this->actingAs($admin)->get("/{$slug}")->assertOk()->assertSee('Work in progress');
-    }
-});
-
-test('the dashboard, reports, analytics, categories and departments pages are now real', function () {
-    $admin = User::factory()->admin()->create();
-
-    foreach (['dashboard', 'reports', 'analytics', 'categories', 'departments'] as $slug) {
+    foreach (['dashboard', 'citizens', 'reports', 'analytics', 'categories', 'departments', 'staff', 'activity-log'] as $slug) {
         $this->actingAs($admin)->get("/{$slug}")->assertOk()->assertDontSee('Work in progress');
     }
 });

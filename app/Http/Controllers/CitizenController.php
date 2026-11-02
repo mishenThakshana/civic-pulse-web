@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityAction;
 use App\Enums\ApprovalStatus;
 use App\Enums\UserRole;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -48,7 +50,11 @@ class CitizenController extends Controller
             'nic_number' => ['required', 'string', 'max:20', 'unique:users,nic_number,'.$citizen->id],
         ]);
 
-        $citizen->update($data);
+        $citizen->fill($data);
+        $changed = array_keys($citizen->getDirty());
+        $citizen->save();
+
+        ActivityLog::record(ActivityAction::CitizenUpdated, "Updated {$citizen->name}'s details.", $citizen, ['changed' => $changed]);
 
         return back()->with('status', "{$citizen->name}'s details have been updated.");
     }
@@ -61,6 +67,8 @@ class CitizenController extends Controller
             'approved_by' => $request->user()->id,
             'rejection_reason' => null,
         ]);
+
+        ActivityLog::record(ActivityAction::CitizenApproved, "Approved {$citizen->name}'s registration.", $citizen);
 
         return back()->with('status', "{$citizen->name}'s account has been approved.");
     }
@@ -78,6 +86,8 @@ class CitizenController extends Controller
             'rejection_reason' => $data['reason'],
         ]);
 
+        ActivityLog::record(ActivityAction::CitizenRejected, "Rejected {$citizen->name}'s registration.", $citizen, ['reason' => $data['reason']]);
+
         return back()->with('status', "{$citizen->name}'s account has been rejected.");
     }
 
@@ -85,12 +95,19 @@ class CitizenController extends Controller
     {
         $citizen->update(['is_active' => ! $citizen->is_active]);
 
+        ActivityLog::record(
+            $citizen->is_active ? ActivityAction::CitizenActivated : ActivityAction::CitizenDeactivated,
+            ($citizen->is_active ? 'Activated' : 'Deactivated')." {$citizen->name}'s account.",
+            $citizen,
+        );
+
         return back()->with('status', "{$citizen->name}'s account has been ".($citizen->is_active ? 'activated' : 'deactivated').'.');
     }
 
     public function destroy(User $citizen): RedirectResponse
     {
         $name = $citizen->name;
+        ActivityLog::record(ActivityAction::CitizenDeleted, "Deleted {$name}'s citizen account.", $citizen, ['email' => $citizen->email, 'nic_number' => $citizen->nic_number]);
         $citizen->delete();
 
         return back()->with('status', "{$name}'s account has been deleted.");

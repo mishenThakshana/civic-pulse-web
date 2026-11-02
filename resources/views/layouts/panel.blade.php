@@ -91,6 +91,7 @@
           <span class="nav-item-text">Analytics</span>
         </a>
 
+        @if (auth()->user()->isAdmin())
         <div class="sidebar-section-label">Administration</div>
 
         <a href="{{ route('categories.index') }}" class="nav-item {{ request()->routeIs('categories.*') ? 'is-active' : '' }}">
@@ -128,6 +129,7 @@
           </span>
           <span class="nav-item-text">Activity Log</span>
         </a>
+        @endif
 
       </nav>
     </aside>

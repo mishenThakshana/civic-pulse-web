@@ -59,6 +59,17 @@ class UserFactory extends Factory
         ]);
     }
 
+    public function staff(): static
+    {
+        return $this->state([
+            'role' => UserRole::Staff,
+            'phone' => null,
+            'nic_number' => null,
+            'approval_status' => ApprovalStatus::Approved,
+            'approved_at' => now(),
+        ]);
+    }
+
     public function approved(): static
     {
         return $this->state([

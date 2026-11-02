@@ -55,6 +55,11 @@ class User extends Authenticatable
         return $this->role === UserRole::Admin;
     }
 
+    public function isStaff(): bool
+    {
+        return $this->role === UserRole::Staff;
+    }
+
     public function isCitizen(): bool
     {
         return $this->role === UserRole::Citizen;
@@ -67,7 +72,7 @@ class User extends Authenticatable
 
     public function canAccessAdminPanel(): bool
     {
-        return $this->isAdmin();
+        return in_array($this->role, UserRole::panelRoles(), true);
     }
 
     /**
@@ -84,6 +89,14 @@ class User extends Authenticatable
     public function upvotes(): HasMany
     {
         return $this->hasMany(Upvote::class);
+    }
+
+    /**
+     * @return HasMany<ActivityLog, $this>
+     */
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
     }
 
     /**

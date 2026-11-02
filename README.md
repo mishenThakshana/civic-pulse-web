@@ -12,11 +12,12 @@ php artisan serve --host=0.0.0.0 --port=8000
 npm run dev   # in a second terminal, for Vite HMR
 ```
 
-### Admin login
+### Panel logins
 
 | Email | Password |
 |---|---|
 | admin@civicpulse.test | password |
+| staff@civicpulse.test | password |
 
 ## Docker
 

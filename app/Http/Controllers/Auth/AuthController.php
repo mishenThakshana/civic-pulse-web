@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,11 +42,16 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        ActivityLog::record(ActivityAction::SignedIn, "{$user->name} signed in.", $user);
+
         return redirect()->intended(route('dashboard'));
     }
 
     public function logout(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        ActivityLog::record(ActivityAction::SignedOut, "{$user->name} signed out.", $user);
+
         Auth::logout();
 
         $request->session()->invalidate();

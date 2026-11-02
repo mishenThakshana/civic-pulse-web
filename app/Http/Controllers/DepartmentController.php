@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityAction;
 use App\Enums\ReportStatus;
+use App\Models\ActivityLog;
 use App\Models\Department;
 use App\Models\Report;
 use Illuminate\Contracts\View\View;
@@ -31,7 +33,9 @@ class DepartmentController extends Controller
             'contact_email' => ['required', 'email', 'max:150'],
         ]);
 
-        Department::create($data);
+        $department = Department::create($data);
+
+        ActivityLog::record(ActivityAction::DepartmentCreated, "Added the \"{$department->name}\" department.", $department);
 
         return back()->with('status', "\"{$data['name']}\" has been added.");
     }
@@ -45,12 +49,15 @@ class DepartmentController extends Controller
 
         $department->update($data);
 
+        ActivityLog::record(ActivityAction::DepartmentUpdated, "Updated the \"{$department->name}\" department.", $department);
+
         return back()->with('status', "\"{$department->name}\" has been updated.");
     }
 
     public function destroy(Department $department): RedirectResponse
     {
         $name = $department->name;
+        ActivityLog::record(ActivityAction::DepartmentDeleted, "Deleted the \"{$name}\" department.", $department);
         $department->delete();
 
         return back()->with('status', "\"{$name}\" has been deleted. Its reports are now unassigned.");

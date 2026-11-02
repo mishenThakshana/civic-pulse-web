@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityAction;
+use App\Models\ActivityLog;
 use App\Models\Category;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +24,9 @@ class CategoryController extends Controller
             'name' => ['required', 'string', 'max:100', 'unique:categories,name'],
         ]);
 
-        Category::create($data);
+        $category = Category::create($data);
+
+        ActivityLog::record(ActivityAction::CategoryCreated, "Added the \"{$category->name}\" category.", $category);
 
         return back()->with('status', "\"{$data['name']}\" has been added.");
     }
@@ -33,7 +37,10 @@ class CategoryController extends Controller
             'name' => ['required', 'string', 'max:100', 'unique:categories,name,'.$category->id],
         ]);
 
+        $previousName = $category->name;
         $category->update($data);
+
+        ActivityLog::record(ActivityAction::CategoryUpdated, "Renamed the \"{$previousName}\" category to \"{$category->name}\".", $category);
 
         return back()->with('status', "\"{$category->name}\" has been updated.");
     }
@@ -45,6 +52,7 @@ class CategoryController extends Controller
         }
 
         $name = $category->name;
+        ActivityLog::record(ActivityAction::CategoryDeleted, "Deleted the \"{$name}\" category.", $category);
         $category->delete();
 
         return back()->with('status', "\"{$name}\" has been deleted.");

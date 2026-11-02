@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Enums\UserRole;
+use App\Models\User;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,5 +31,8 @@ class AppServiceProvider extends ServiceProvider
         if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
+
+        Route::bind('citizen', fn (string $value) => User::where('role', UserRole::Citizen)->findOrFail($value));
+        Route::bind('staff', fn (string $value) => User::whereIn('role', UserRole::panelRoles())->findOrFail($value));
     }
 }

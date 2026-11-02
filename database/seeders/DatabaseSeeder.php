@@ -17,6 +17,11 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@civicpulse.test',
         ]);
 
+        User::factory()->staff()->create([
+            'name' => 'Staff Member',
+            'email' => 'staff@civicpulse.test',
+        ]);
+
         $this->call([
             CategorySeeder::class,
             DepartmentSeeder::class,

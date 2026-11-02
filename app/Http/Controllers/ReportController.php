@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityAction;
 use App\Enums\ReportStatus;
+use App\Models\ActivityLog;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Report;
@@ -99,6 +101,15 @@ class ReportController extends Controller
         ]);
 
         $report->load('department');
+
+        ActivityLog::record(
+            ActivityAction::ReportUpdated,
+            $fromStatus === $toStatus
+                ? "Updated report #{$report->id} ({$toStatus->label()})."
+                : "Moved report #{$report->id} from {$fromStatus->label()} to {$toStatus->label()}.",
+            $report,
+            ['from_status' => $fromStatus->value, 'to_status' => $toStatus->value, 'department' => $report->department?->name],
+        );
         $notification = new ReportStatusUpdated($report);
         $report->user->notify($notification);
         $this->push->sendToUser($report->user, $notification->title(), $notification->body(), ['report_id' => $report->id]);

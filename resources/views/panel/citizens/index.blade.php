@@ -96,11 +96,13 @@
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <button type="button" class="btn-ghost btn-ghost--sm" data-modal-open="viewModal{{ $citizen->id }}">View</button>
               <button type="button" class="btn-ghost btn-ghost--sm" data-modal-open="editModal{{ $citizen->id }}">Edit</button>
-              <form method="POST" action="{{ route('citizens.destroy', $citizen) }}" onsubmit="return confirm('Permanently delete {{ addslashes($citizen->name) }}\'s account?')">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn-ghost btn-ghost--sm">Delete</button>
-              </form>
+              @if (auth()->user()->isAdmin())
+                <form method="POST" action="{{ route('citizens.destroy', $citizen) }}" onsubmit="return confirm('Permanently delete {{ addslashes($citizen->name) }}\'s account?')">
+                  @csrf
+                  @method('DELETE')
+                  <button type="submit" class="btn-ghost btn-ghost--sm">Delete</button>
+                </form>
+              @endif
             </div>
           </td>
         </tr>
