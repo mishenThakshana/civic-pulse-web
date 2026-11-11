@@ -155,6 +155,12 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    # Two pushes in quick succession used to deploy at the same time and
+    # collide on container recreation ("removal of container … is already in
+    # progress"). Queue deploys instead; never cancel one mid-migration.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
       - name: Deploy to VPS over SSH
         uses: appleboy/ssh-action@v1

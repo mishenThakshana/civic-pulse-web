@@ -27,6 +27,7 @@ How to maintain this file is described in the [README](README.md#maintaining-the
 
 ### Fixed
 - **Deploys failing on a dropped image download.** A deploy failed when GHCR reset the connection mid-download of the AI image. The deploy now retries `docker compose pull` up to 5 times with backoff, and uses `--quiet` so per-layer progress no longer floods the Actions log. A failed pull leaves the previous release running, because `up -d` and the migrations never run.
+- **Overlapping deploys colliding.** Two pushes close together ran their deploy jobs at the same time, and one failed with "removal of container … is already in progress". Deploys now share a concurrency group, so a second deploy waits for the first to finish instead of running alongside it.
 - The intelephense "undefined method `user`" warning in `ActivityLog::record()` (now uses `Auth::user()`).
 
 ### Security

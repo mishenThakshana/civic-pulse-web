@@ -247,7 +247,7 @@ Start from `.env.docker.example`. It differs from `.env.example` in a few Docker
    - `ghcr.io/mishenthakshana/civic-pulse-app`
    - `ghcr.io/mishenthakshana/civic-pulse-web-nginx`
    - `ghcr.io/mishenthakshana/civic-pulse-ai`
-4. **deploy** *(main only)*: SSHes into the VPS and:
+4. **deploy** *(main only)*: runs one at a time. A deploy started while another is running waits for it, rather than both recreating containers at once. It SSHes into the VPS and:
    - hard-resets its git clone to `origin/main`, so `docker-compose.yml`, nginx config and the rest stay in sync, not just the images;
    - rewrites `ai/.env` from the `GEMINI_API_KEY` secret;
    - pulls the new images, retrying up to 5 times with backoff because GHCR occasionally drops large layer downloads, then runs `docker compose up -d` and `migrate --force`. If the pull still fails, nothing is restarted and the previous release keeps running;
