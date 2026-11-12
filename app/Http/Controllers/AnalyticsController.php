@@ -52,7 +52,7 @@ class AnalyticsController extends Controller
             ->map(function (Report $report) {
                 $secondEntry = $report->statusHistory->skip(1)->first();
 
-                return $secondEntry?->created_at?->diffInHours($report->created_at);
+                return $secondEntry?->created_at ? $report->created_at->diffInHours($secondEntry->created_at) : null;
             })
             ->filter(fn ($value) => $value !== null)
             ->sort()

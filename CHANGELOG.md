@@ -20,12 +20,15 @@ How to maintain this file is described in the [README](README.md#maintaining-the
 - **OpenAPI 3 specification** at `/openapi/integrations-v1.json`, for Postman or Swagger import and client generation.
 - **API activity in the audit log.** Updates posted by department systems appear in the activity log as "*Department* (Integration API)". Issuing and revoking keys is logged too.
 - Report timelines in the panel and the citizen app label API-posted updates as "*Department* (via API)".
+- **Citizen API in English, Sinhala and Tamil.** The citizen API (`/api/v1`) answers in the language the app sends as `Accept-Language` (`en`, `si` or `ta`; anything else falls back to English). Sign-in refusals, the screening refusal, vote and device messages, validation errors (with translated field names) and the automatic "Report received." history note are translated. Translations live in `lang/si.json`, `lang/ta.json` and `lang/{si,ta}/validation.php`. The panel and the integration API are unchanged and stay in English.
+- **Alerts and push notifications in the citizen's language.** Status alerts now store the status, department and report title, and `GET /api/v1/notifications` builds the text in the requested language (older alerts keep their stored English text). Each device records the language it registered with, and push messages are sent once per language group.
 
 ### Changed
 - Panel report updates and API report updates now share one code path (`ReportUpdateService`). History, citizen notifications and audit entries are identical whichever way an update arrives.
 - Any posted status update now bumps the report's `updated_at`, so `updated_since` syncs pick up note-only updates too.
 
 ### Fixed
+- **Negative resolution and response times.** The dashboard's average resolution time, each department's average resolution time and the analytics page's median first response were shown as negative numbers (for example "-5.6d"), because Carbon 3 returns a signed difference and the dates were compared in the wrong order. They are now measured forwards from submission. Covered by `AnalyticsPanelTest`.
 - **Deploys failing on a dropped image download.** A deploy failed when GHCR reset the connection mid-download of the AI image. The deploy now retries `docker compose pull` up to 5 times with backoff, and uses `--quiet` so per-layer progress no longer floods the Actions log. A failed pull leaves the previous release running, because `up -d` and the migrations never run.
 - **Overlapping deploys colliding.** Two pushes close together ran their deploy jobs at the same time, and one failed with "removal of container … is already in progress". Deploys now share a concurrency group, so a second deploy waits for the first to finish instead of running alongside it.
 - The intelephense "undefined method `user`" warning in `ActivityLog::record()` (now uses `Auth::user()`).
@@ -36,7 +39,8 @@ How to maintain this file is described in the [README](README.md#maintaining-the
 - **A key can't see another department's reports.** It gets a `404` for them, the same as a missing report.
 
 ### Upgrade notes
-- **Migrations:** `create_department_api_keys_table`, and `add_changed_by_department_id_to_report_status_history_table` (nullable column). Both are additive, so rolling the image back is safe.
+- **Migrations:** `create_department_api_keys_table`, `add_changed_by_department_id_to_report_status_history_table` (nullable column) and `add_locale_to_device_tokens_table` (nullable column). All are additive, so rolling the image back is safe.
+- **Citizen API:** `POST /api/v1/devices` now records the request's language; apps should re-register their token when the user changes language.
 - No new environment variables or secrets.
 - When changing the integration API, keep the routes, the `/developers` page and `public/openapi/integrations-v1.json` in step. `DeveloperDocsTest` fails otherwise.
 

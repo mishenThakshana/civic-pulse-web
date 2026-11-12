@@ -13,9 +13,9 @@ class DeviceController extends Controller
     {
         DeviceToken::updateOrCreate(
             ['token' => $request->validated('token')],
-            ['user_id' => $request->user()->id, 'platform' => $request->validated('platform')]
+            ['user_id' => $request->user()->id, 'platform' => $request->validated('platform'), 'locale' => app()->getLocale()]
         );
 
-        return response()->json(['message' => 'Device registered.'], 201);
+        return response()->json(['message' => __('Device registered.')], 201);
     }
 }

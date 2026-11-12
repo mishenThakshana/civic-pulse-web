@@ -1,0 +1,20 @@
+{
+    "These credentials do not match our records.": "இந்த உள்நுழைவு விவரங்கள் எங்கள் பதிவுகளுடன் பொருந்தவில்லை.",
+    "This account has been deactivated.": "இந்தக் கணக்கு செயலிழக்கச் செய்யப்பட்டுள்ளது.",
+    "Your registration was not approved: :reason": "உங்கள் பதிவு அங்கீகரிக்கப்படவில்லை: :reason",
+    "Your registration was not approved. Please contact support.": "உங்கள் பதிவு அங்கீகரிக்கப்படவில்லை. தயவுசெய்து உதவி மையத்தைத் தொடர்புகொள்ளவும்.",
+    "Your account is still pending admin approval.": "உங்கள் கணக்கு இன்னும் நிர்வாகியின் அங்கீகாரத்திற்காகக் காத்திருக்கிறது.",
+    "Your account has been submitted for review. You will be able to sign in once an administrator approves your NIC.": "உங்கள் கணக்கு பரிசீலனைக்காகச் சமர்ப்பிக்கப்பட்டுள்ளது. நிர்வாகி உங்கள் தேசிய அடையாள அட்டையை அங்கீகரித்த பின் நீங்கள் உள்நுழையலாம்.",
+    "Our AI screening flagged this report as possible spam or an unrelated photo, so it was not posted. Please submit a clear photo of the issue with a short, genuine description.": "எங்கள் AI சோதனை இந்த அறிக்கையை ஸ்பேம் அல்லது தொடர்பில்லாத புகைப்படம் எனக் கண்டதால் அது வெளியிடப்படவில்லை. பிரச்சினையின் தெளிவான புகைப்படத்துடனும் சுருக்கமான, உண்மையான விளக்கத்துடனும் மீண்டும் சமர்ப்பிக்கவும்.",
+    "AI screening is unavailable right now, so your report could not be posted. Please try again shortly.": "AI சோதனை தற்போது கிடைக்காததால் உங்கள் அறிக்கையை வெளியிட முடியவில்லை. சிறிது நேரத்தில் மீண்டும் முயற்சிக்கவும்.",
+    "You have already voted on this report.": "இந்த அறிக்கைக்கு நீங்கள் ஏற்கனவே ஆதரவு தெரிவித்துவிட்டீர்கள்.",
+    "Device registered.": "சாதனம் பதிவுசெய்யப்பட்டது.",
+    "Work has started on your report": "உங்கள் அறிக்கை தொடர்பான பணி தொடங்கியுள்ளது",
+    "Your report was resolved": "உங்கள் அறிக்கையின் பிரச்சினை தீர்க்கப்பட்டது",
+    "Your report was updated": "உங்கள் அறிக்கை புதுப்பிக்கப்பட்டது",
+    ":department is handling \":title\".": ":department \":title\" தொடர்பாகச் செயல்பட்டு வருகிறது.",
+    "\":title\" has been updated.": "\":title\" புதுப்பிக்கப்பட்டது.",
+    "Report received.": "அறிக்கை பெறப்பட்டது.",
+    ":department (via API)": ":department (API மூலம்)",
+    "System": "அமைப்பு"
+}

@@ -1,0 +1,20 @@
+{
+    "These credentials do not match our records.": "මෙම පිවිසුම් තොරතුරු අපගේ වාර්තා සමඟ නොගැළපේ.",
+    "This account has been deactivated.": "මෙම ගිණුම අක්‍රිය කර ඇත.",
+    "Your registration was not approved: :reason": "ඔබගේ ලියාපදිංචිය අනුමත කර නැත: :reason",
+    "Your registration was not approved. Please contact support.": "ඔබගේ ලියාපදිංචිය අනුමත කර නැත. කරුණාකර සහාය කණ්ඩායම අමතන්න.",
+    "Your account is still pending admin approval.": "ඔබගේ ගිණුම තවමත් පරිපාලක අනුමැතිය සඳහා රැඳී ඇත.",
+    "Your account has been submitted for review. You will be able to sign in once an administrator approves your NIC.": "ඔබගේ ගිණුම සමාලෝචනය සඳහා යොමු කර ඇත. පරිපාලකයෙකු ඔබගේ ජාතික හැඳුනුම්පත අනුමත කළ පසු ඔබට පිවිසිය හැක.",
+    "Our AI screening flagged this report as possible spam or an unrelated photo, so it was not posted. Please submit a clear photo of the issue with a short, genuine description.": "අපගේ AI පරීක්ෂාව මෙම වාර්තාව අයාචිත පණිවිඩයක් හෝ ගැටලුවට අදාළ නොවන ඡායාරූපයක් ලෙස හඳුනාගත් බැවින් එය පළ කළේ නැත. කරුණාකර ගැටලුවේ පැහැදිලි ඡායාරූපයක් සහ කෙටි, සත්‍ය විස්තරයක් සමඟ නැවත ඉදිරිපත් කරන්න.",
+    "AI screening is unavailable right now, so your report could not be posted. Please try again shortly.": "AI පරීක්ෂාව මේ මොහොතේ ලබා ගත නොහැකි බැවින් ඔබගේ වාර්තාව පළ කළ නොහැකි විය. කරුණාකර ටික වේලාවකින් නැවත උත්සාහ කරන්න.",
+    "You have already voted on this report.": "ඔබ දැනටමත් මෙම වාර්තාවට සහාය දක්වා ඇත.",
+    "Device registered.": "උපාංගය ලියාපදිංචි කරන ලදී.",
+    "Work has started on your report": "ඔබගේ වාර්තාව සම්බන්ධයෙන් කටයුතු ආරම්භ කර ඇත",
+    "Your report was resolved": "ඔබගේ වාර්තාවේ ගැටලුව විසඳා ඇත",
+    "Your report was updated": "ඔබගේ වාර්තාව යාවත්කාලීන කර ඇත",
+    ":department is handling \":title\".": "\":title\" සම්බන්ධයෙන් :department කටයුතු කරමින් සිටී.",
+    "\":title\" has been updated.": "\":title\" යාවත්කාලීන කර ඇත.",
+    "Report received.": "වාර්තාව ලැබුණි.",
+    ":department (via API)": ":department (API හරහා)",
+    "System": "පද්ධතිය"
+}

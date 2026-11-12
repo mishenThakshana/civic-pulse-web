@@ -65,7 +65,11 @@ class ReportUpdateService
 
         $notification = new ReportStatusUpdated($report);
         $report->user->notify($notification);
-        $this->push->sendToUser($report->user, $notification->title(), $notification->body(), ['report_id' => $report->id]);
+        $this->push->sendLocalizedToUser(
+            $report->user,
+            fn (string $locale): array => [$notification->title($locale), $notification->body($locale)],
+            ['report_id' => $report->id],
+        );
 
         return $entry;
     }

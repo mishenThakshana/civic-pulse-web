@@ -22,30 +22,46 @@ class ReportStatusUpdated extends Notification
     }
 
     /**
-     * @return array<string, mixed>
+     * The structured fields are stored alongside the English text so the
+     * citizen API can render the alert in whichever language the app asks for.
+     *
+     * @return array{title: string, body: string, report_id: int, status: string, department: ?string, report_title: string}
      */
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => $this->title(),
-            'body' => $this->body(),
+            'title' => $this->title('en'),
+            'body' => $this->body('en'),
             'report_id' => $this->report->id,
+            'status' => $this->report->status->value,
+            'department' => $this->report->department?->name,
+            'report_title' => $this->report->title,
         ];
     }
 
-    public function title(): string
+    public function title(?string $locale = null): string
     {
-        return match ($this->report->status) {
-            ReportStatus::InProgress => 'Work has started on your report',
-            ReportStatus::Resolved => 'Your report was resolved',
-            ReportStatus::Open => 'Your report was updated',
+        return self::titleFor($this->report->status, $locale);
+    }
+
+    public function body(?string $locale = null): string
+    {
+        return self::bodyFor($this->report->department?->name, $this->report->title, $locale);
+    }
+
+    public static function titleFor(ReportStatus $status, ?string $locale = null): string
+    {
+        return match ($status) {
+            ReportStatus::InProgress => __('Work has started on your report', [], $locale),
+            ReportStatus::Resolved => __('Your report was resolved', [], $locale),
+            ReportStatus::Open => __('Your report was updated', [], $locale),
         };
     }
 
-    public function body(): string
+    public static function bodyFor(?string $department, string $reportTitle, ?string $locale = null): string
     {
-        return $this->report->department
-            ? "{$this->report->department->name} is handling \"{$this->report->title}\"."
-            : "\"{$this->report->title}\" has been updated.";
+        return $department
+            ? __(':department is handling ":title".', ['department' => $department, 'title' => $reportTitle], $locale)
+            : __('":title" has been updated.', ['title' => $reportTitle], $locale);
     }
 }

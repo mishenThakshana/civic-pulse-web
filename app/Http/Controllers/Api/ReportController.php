@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreReportRequest;
 use App\Http\Resources\ReportResource;
 use App\Models\Report;
+use App\Models\ReportStatusHistory;
 use App\Services\ReportScreeningService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -60,7 +61,7 @@ class ReportController extends Controller
             'from_status' => null,
             'to_status' => ReportStatus::Open,
             'changed_by' => $request->user()->id,
-            'note' => 'Report received.',
+            'note' => ReportStatusHistory::REPORT_RECEIVED_NOTE,
         ]);
 
         // A citizen reporting an issue is implicitly affected by it — count
@@ -101,7 +102,7 @@ class ReportController extends Controller
         try {
             $report->upvotes()->create(['user_id' => $request->user()->id]);
         } catch (UniqueConstraintViolationException) {
-            return response()->json(['message' => 'You have already voted on this report.'], 422);
+            return response()->json(['message' => __('You have already voted on this report.')], 422);
         }
 
         return response()->json(['votes_count' => $report->upvotes()->count()]);

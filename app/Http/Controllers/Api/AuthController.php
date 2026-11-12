@@ -39,7 +39,7 @@ class AuthController extends Controller
         // approves it, and `login()` refuses unapproved citizens anyway.
         return response()->json([
             'user' => new UserResource($user),
-            'message' => 'Your account has been submitted for review. You will be able to sign in once an administrator approves your NIC.',
+            'message' => __('Your account has been submitted for review. You will be able to sign in once an administrator approves your NIC.'),
         ], 201);
     }
 
@@ -55,7 +55,7 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['These credentials do not match our records.'],
+                'email' => [__('These credentials do not match our records.')],
             ]);
         }
 
@@ -94,15 +94,15 @@ class AuthController extends Controller
     private function accessDeniedReason(User $user): ?string
     {
         if (! $user->is_active) {
-            return 'This account has been deactivated.';
+            return __('This account has been deactivated.');
         }
 
         if ($user->role === UserRole::Citizen && $user->approval_status !== ApprovalStatus::Approved) {
             return match ($user->approval_status) {
                 ApprovalStatus::Rejected => $user->rejection_reason
-                    ? "Your registration was not approved: {$user->rejection_reason}"
-                    : 'Your registration was not approved. Please contact support.',
-                default => 'Your account is still pending admin approval.',
+                    ? __('Your registration was not approved: :reason', ['reason' => $user->rejection_reason])
+                    : __('Your registration was not approved. Please contact support.'),
+                default => __('Your account is still pending admin approval.'),
             };
         }
 

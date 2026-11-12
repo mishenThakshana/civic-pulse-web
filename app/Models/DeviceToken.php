@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'token', 'platform'])]
+#[Fillable(['user_id', 'token', 'platform', 'locale'])]
 class DeviceToken extends Model
 {
     /** @use HasFactory<DeviceTokenFactory> */

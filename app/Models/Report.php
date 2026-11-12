@@ -81,7 +81,11 @@ class Report extends Model
             ->get();
 
         $days = $resolved
-            ->map(fn (self $report) => $report->statusHistory->first()?->created_at?->diffInHours($report->created_at) / 24)
+            ->map(function (self $report): ?float {
+                $resolvedAt = $report->statusHistory->first()?->created_at;
+
+                return $resolvedAt ? $report->created_at->diffInHours($resolvedAt) / 24 : null;
+            })
             ->filter(fn ($value) => $value !== null);
 
         return $days->isNotEmpty() ? round($days->avg(), 1) : null;

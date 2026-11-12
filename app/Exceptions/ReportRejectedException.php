@@ -18,8 +18,7 @@ class ReportRejectedException extends Exception
     public static function flaggedAsSpam(array $reasons): self
     {
         return new self(
-            'Our AI screening flagged this report as possible spam or an unrelated photo, so it was not posted. '
-            .'Please submit a clear photo of the issue with a short, genuine description.',
+            __('Our AI screening flagged this report as possible spam or an unrelated photo, so it was not posted. Please submit a clear photo of the issue with a short, genuine description.'),
             422,
             $reasons,
         );
@@ -27,7 +26,7 @@ class ReportRejectedException extends Exception
 
     public static function screeningUnavailable(): self
     {
-        return new self('AI screening is unavailable right now, so your report could not be posted. Please try again shortly.', 503);
+        return new self(__('AI screening is unavailable right now, so your report could not be posted. Please try again shortly.'), 503);
     }
 
     /**
