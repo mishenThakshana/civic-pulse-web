@@ -181,6 +181,18 @@ jobs:
             # the repo secret so a rotated key is picked up on the next deploy.
             umask 077
             printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY" > ai/.env
+            # Trained models (git-ignored) are copied to ai/models by hand. Enable
+            # each one only if its files are present, so a missing model just
+            # reports model_not_loaded instead of breaking the deploy.
+            if [ -f ai/models/image/image_classifier.pt ]; then
+              echo 'IMAGE_MODEL_PATH=models/image/image_classifier.pt' >> ai/.env
+            fi
+            if [ -f ai/models/text_category/model.safetensors ]; then
+              echo 'TEXT_MODEL_NAME=/app/models/text_category' >> ai/.env
+            fi
+            if [ -f ai/models/spam/spam_model.joblib ]; then
+              echo 'SPAM_MODEL_PATH=models/spam/spam_model.joblib' >> ai/.env
+            fi
             # GHCR downloads of the large AI image layers occasionally drop
             # mid-transfer ("connection reset by peer"). Retry with backoff —
             # layers that finished are cached, so each attempt resumes. --quiet

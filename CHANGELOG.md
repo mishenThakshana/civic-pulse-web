@@ -25,6 +25,7 @@ How to maintain this file is described in the [README](README.md#maintaining-the
 - **Staff can correct a report's category.** The report page's update form has a Category field. A change is saved with the update and audited with the old and new category (`from_category` / `to_category` in the activity log entry), which keeps a record of corrections for retraining the AI models.
 
 ### Changed
+- **Trained AI models in production.** The AI service now loads the trained image, text and spam models from `ai/models` (mounted read-only). With the multimodal model configured they act as its fallback; without it they replace the rule-based fallbacks. Results are in `ai/models/README_MODELS.txt`.
 - **Categories now match the AI models.** The default categories are the ten the screening models are trained on (Pothole, Road damage, Garbage, Flooding, Blocked drain, Broken street light, Fallen tree, Damaged sign, Damaged public property, Other), defined in `App\Enums\IssueCategory`. Each slug matches the model label (`blocked-drain` ↔ `blocked_drain`). `CategorySeeder` creates them, and the mobile app translates all ten into Sinhala and Tamil.
 - Panel report updates and API report updates now share one code path (`ReportUpdateService`). History, citizen notifications and audit entries are identical whichever way an update arrives.
 - Any posted status update now bumps the report's `updated_at`, so `updated_since` syncs pick up note-only updates too.
@@ -42,6 +43,7 @@ How to maintain this file is described in the [README](README.md#maintaining-the
 
 ### Upgrade notes
 - **Migrations:** `create_department_api_keys_table`, `add_changed_by_department_id_to_report_status_history_table` (nullable column) and `add_locale_to_device_tokens_table` (nullable column). All are additive, so rolling the image back is safe.
+- **AI models:** copy the weights to `/srv/civicpulse/ai/models` before deploying (see `ai/models/README_MODELS.txt`). The deploy enables each model only if its file is present, so deploying without them is safe. Loading the models raises the AI container's memory use, so check `docker stats` after the first deploy.
 - **Category migration:** `align_categories_with_issue_categories` is a data migration. On an existing database it renames Drainage, Lighting and Waste Management to Blocked drain, Broken street light and Garbage, moves reports from Public Safety and Water Supply to Other (staff can re-categorise them), and adds the missing categories. It cannot be reversed automatically, so take a database backup before deploying. Ship the updated mobile app at the same time so the new categories are translated.
 - **Citizen API:** `POST /api/v1/devices` now records the request's language; apps should re-register their token when the user changes language.
 - No new environment variables or secrets.

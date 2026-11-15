@@ -17,6 +17,17 @@ Layout
   embeddings/                      optional local copy of a Sentence
                                    Transformers model     -> EMBEDDING_MODEL_NAME
 
+Production
+  docker-compose.yml mounts ./ai/models read-only at /app/models. Weights are
+  not in git, so copy them to the server once (about 1.1 GB, without the
+  training checkpoints):
+    cd ai/models
+    rsync -az --relative image/image_classifier.pt spam/spam_model.joblib \
+      text_category/{config.json,model.safetensors,tokenizer.json,tokenizer_config.json,special_tokens_map.json} \
+      <server>:/srv/civicpulse/ai/models/
+  Each deploy writes ai/.env and enables a model only when its file exists,
+  then restarts the service. To roll a model back, delete its file and redeploy.
+
 Relative paths in .env are resolved from the ai/ directory, e.g.
   IMAGE_MODEL_PATH=models/image/civi_pulse_cls_v1.pt
 

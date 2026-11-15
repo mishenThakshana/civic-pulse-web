@@ -74,6 +74,11 @@ services:
         required: false
     environment:
       APP_ENV: production
+    # Trained model weights are git-ignored and copied to the server
+    # separately (see ai/models/README_MODELS.txt). Read-only: the service
+    # never writes models.
+    volumes:
+      - ./ai/models:/app/models:ro
     networks: [civicpulse]
 
   db:
