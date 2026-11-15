@@ -112,6 +112,15 @@
         @csrf
         @method('PATCH')
         <div class="field">
+          <label for="category_id">Category</label>
+          <select id="category_id" name="category_id">
+            <option value="">Uncategorized</option>
+            @foreach ($categories as $category)
+              <option value="{{ $category->id }}" {{ (string) old('category_id', $report->category_id) === (string) $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
+            @endforeach
+          </select>
+        </div>
+        <div class="field" style="margin-top:14px;">
           <label for="department_id">Assign to department</label>
           <select id="department_id" name="department_id">
             <option value="">Unassigned</option>

@@ -10,13 +10,12 @@ class CategorySeeder extends Seeder
     /**
      * Run the database seeds.
      *
-     * Safe to re-run (including in production): existing categories are
-     * matched by name and left untouched, so this only ever adds what's missing.
+     * Seeds the ten issue categories the AI screening service is trained on
+     * (App\Enums\IssueCategory). Safe to re-run, including in production:
+     * existing categories are matched by slug and left as they are.
      */
     public function run(): void
     {
-        foreach (['Road damage', 'Drainage', 'Lighting', 'Waste Management', 'Public Safety', 'Water Supply', 'Other'] as $name) {
-            Category::firstOrCreate(['name' => $name]);
-        }
+        Category::syncWithIssueCategories();
     }
 }

@@ -62,6 +62,7 @@ class ReportController extends Controller
             'report' => $report,
             'statuses' => ReportStatus::cases(),
             'departments' => Department::orderBy('name')->get(),
+            'categories' => Category::orderBy('name')->get(),
         ]);
     }
 
@@ -69,12 +70,17 @@ class ReportController extends Controller
     {
         $data = $request->validate([
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'category_id' => ['sometimes', 'nullable', 'integer', 'exists:categories,id'],
             'status' => ['required', 'string', 'in:'.implode(',', array_column(ReportStatus::cases(), 'value'))],
             'note' => ['nullable', 'string', 'max:1000'],
             'photo' => ['nullable', 'file', 'image', 'max:6144'],
         ]);
 
         $report->department_id = $data['department_id'] ?? null;
+
+        if (array_key_exists('category_id', $data)) {
+            $report->category_id = $data['category_id'];
+        }
 
         $this->reportUpdates->record(
             $report,

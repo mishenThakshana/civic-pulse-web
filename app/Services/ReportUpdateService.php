@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ActivityAction;
 use App\Enums\ReportStatus;
 use App\Models\ActivityLog;
+use App\Models\Category;
 use App\Models\Department;
 use App\Models\Report;
 use App\Models\ReportStatusHistory;
@@ -31,6 +32,9 @@ class ReportUpdateService
     ): ReportStatusHistory {
         $fromStatus = $report->status;
 
+        $categoryChanged = $report->isDirty('category_id');
+        $fromCategory = $categoryChanged ? Category::find($report->getOriginal('category_id'))?->name : null;
+
         $report->status = $toStatus;
         $report->save();
         $report->touch();
@@ -44,11 +48,17 @@ class ReportUpdateService
             'photo_path' => $photo?->store('report-updates', 'public'),
         ]);
 
-        $report->load('department');
+        $report->load(['department', 'category']);
 
         $summary = $fromStatus === $toStatus
             ? "Updated report #{$report->id} ({$toStatus->label()})"
             : "Moved report #{$report->id} from {$fromStatus->label()} to {$toStatus->label()}";
+
+        $toCategory = $report->category?->name;
+
+        if ($categoryChanged) {
+            $summary .= ' and changed its category from '.($fromCategory ?? 'Uncategorized').' to '.($toCategory ?? 'Uncategorized');
+        }
 
         ActivityLog::record(
             ActivityAction::ReportUpdated,
@@ -58,6 +68,8 @@ class ReportUpdateService
                 'from_status' => $fromStatus->value,
                 'to_status' => $toStatus->value,
                 'department' => $report->department?->name,
+                'from_category' => $categoryChanged ? ($fromCategory ?? 'Uncategorized') : null,
+                'to_category' => $categoryChanged ? ($toCategory ?? 'Uncategorized') : null,
                 'source' => $byDepartment ? 'api' : null,
             ]),
             $byUser,

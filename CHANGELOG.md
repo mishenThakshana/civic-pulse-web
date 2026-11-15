@@ -22,8 +22,10 @@ How to maintain this file is described in the [README](README.md#maintaining-the
 - Report timelines in the panel and the citizen app label API-posted updates as "*Department* (via API)".
 - **Citizen API in English, Sinhala and Tamil.** The citizen API (`/api/v1`) answers in the language the app sends as `Accept-Language` (`en`, `si` or `ta`; anything else falls back to English). Sign-in refusals, the screening refusal, vote and device messages, validation errors (with translated field names) and the automatic "Report received." history note are translated. Translations live in `lang/si.json`, `lang/ta.json` and `lang/{si,ta}/validation.php`. The panel and the integration API are unchanged and stay in English.
 - **Alerts and push notifications in the citizen's language.** Status alerts now store the status, department and report title, and `GET /api/v1/notifications` builds the text in the requested language (older alerts keep their stored English text). Each device records the language it registered with, and push messages are sent once per language group.
+- **Staff can correct a report's category.** The report page's update form has a Category field. A change is saved with the update and audited with the old and new category (`from_category` / `to_category` in the activity log entry), which keeps a record of corrections for retraining the AI models.
 
 ### Changed
+- **Categories now match the AI models.** The default categories are the ten the screening models are trained on (Pothole, Road damage, Garbage, Flooding, Blocked drain, Broken street light, Fallen tree, Damaged sign, Damaged public property, Other), defined in `App\Enums\IssueCategory`. Each slug matches the model label (`blocked-drain` ↔ `blocked_drain`). `CategorySeeder` creates them, and the mobile app translates all ten into Sinhala and Tamil.
 - Panel report updates and API report updates now share one code path (`ReportUpdateService`). History, citizen notifications and audit entries are identical whichever way an update arrives.
 - Any posted status update now bumps the report's `updated_at`, so `updated_since` syncs pick up note-only updates too.
 
@@ -40,6 +42,7 @@ How to maintain this file is described in the [README](README.md#maintaining-the
 
 ### Upgrade notes
 - **Migrations:** `create_department_api_keys_table`, `add_changed_by_department_id_to_report_status_history_table` (nullable column) and `add_locale_to_device_tokens_table` (nullable column). All are additive, so rolling the image back is safe.
+- **Category migration:** `align_categories_with_issue_categories` is a data migration. On an existing database it renames Drainage, Lighting and Waste Management to Blocked drain, Broken street light and Garbage, moves reports from Public Safety and Water Supply to Other (staff can re-categorise them), and adds the missing categories. It cannot be reversed automatically, so take a database backup before deploying. Ship the updated mobile app at the same time so the new categories are translated.
 - **Citizen API:** `POST /api/v1/devices` now records the request's language; apps should re-register their token when the user changes language.
 - No new environment variables or secrets.
 - When changing the integration API, keep the routes, the `/developers` page and `public/openapi/integrations-v1.json` in step. `DeveloperDocsTest` fails otherwise.
