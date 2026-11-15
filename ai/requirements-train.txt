@@ -1,0 +1,6 @@
+# Extra packages needed only to TRAIN models (scripts/train_*.py, scripts/data_prep/).
+-r requirements.txt
+datasets>=3.0,<4.1
+accelerate>=1.1
+huggingface-hub>=0.34,<1.0
+pyarrow>=15

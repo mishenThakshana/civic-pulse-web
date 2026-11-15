@@ -2,8 +2,8 @@
 
 An independent Python AI service for **Civi Pulse**. It analyses citizen infrastructure reports (photo + description + location) and returns advisory signals for the council: issue category, spam probability, severity, image/text consistency, duplicate probability and an overall validity score.
 
-> **Status: architecture only. The service contains no trained models.**
-> No dataset has been selected and nothing has been trained. With no models configured, the API still runs. Components that need a model return `"status": "model_not_loaded"`. Components with a documented rule-based fallback return `"status": "heuristic"`. Heuristic output is never presented as trained AI.
+> **Status: three trained models (image category, text category, spam).**
+> They were trained on public data (see `datasets/README_DATASET.txt`) and their test results are in `models/README_MODELS.txt`. Weights are git-ignored and are enabled with `IMAGE_MODEL_PATH`, `TEXT_MODEL_NAME` and `SPAM_MODEL_PATH`. Severity, consistency and duplicate models are not trained. With no models configured, the API still runs: components that need a model return `"status": "model_not_loaded"` and components with a documented rule-based fallback return `"status": "heuristic"`.
 
 The service lives entirely in `ai/`. It does not touch the mobile app (`app/`) or the council dashboard/backend (`web/`), and it talks to them only through REST.
 
@@ -49,18 +49,18 @@ For each report it produces:
 
 ### CURRENT IMPLEMENTATION vs FUTURE DATASET / MODEL WORK
 
-| Component | CURRENT IMPLEMENTATION (no trained models) | FUTURE DATASET / MODEL WORK |
+| Component | CURRENT IMPLEMENTATION | FUTURE DATASET / MODEL WORK |
 |---|---|---|
 | Image validation | ✅ Real: MIME type + magic bytes, size, dimensions, decode check, EXIF stripping | – |
 | Image quality | ✅ Real: OpenCV blur (Laplacian variance) and exposure checks | Re-tune thresholds on real photos |
 | Image hash | ✅ Real: 64-bit perceptual dHash (used for duplicate checks) | – |
-| Image category | `model_not_loaded` | Train YOLO (classification first, detection later) |
+| Image category | ✅ Trained YOLO11n-cls (test accuracy 0.763; 0.590 on real citizen photos) | More real citizen photos, Sri Lankan photos, detection later |
 | Text normalisation / language | ✅ Real: Unicode NFC, Sinhala ZWJ preserved, script-based en/si/ta detection | Trained language ID for romanised text |
-| Text category | `model_not_loaded` | Fine-tune XLM-R / LaBSE-class multilingual model |
+| Text category | ✅ Fine-tuned XLM-R base on English reports (test macro F1 0.816) | Sinhala/Tamil labelled data and per-language evaluation |
 | Embeddings | `model_not_loaded` (can be enabled with a pretrained Sentence Transformers model) | Choose/fine-tune a multilingual embedding model |
-| Spam | `heuristic`: documented noisy-OR rules (URLs, promo words, nonsense, location) | Train a scikit-learn model on the spam dataset |
+| Spam | ✅ Trained scikit-learn model (test accuracy 0.993 at threshold 0.70); noisy-OR rules as fallback | Real civic spam, Sinhala/Tamil, abusive and gibberish examples |
 | Severity | `heuristic`: English keyword rules. Sinhala/Tamil get `model_not_loaded` | Fine-tune a severity model (text first, then multimodal) |
-| Consistency | `model_not_loaded` (works as soon as the image model plus a text or embedding model is loaded) | Tune the threshold; optionally a joint image-text model |
+| Consistency | Works with the trained image + text models (label-distribution overlap); threshold 0.70 is untuned | Tune the threshold on labelled pairs; optionally a joint image-text model |
 | Duplicate | `heuristic`: documented weighted signals (GPS, TF-IDF text, image hash, time) | Train a pair classifier on the duplicate dataset |
 | Validity | `heuristic`: documented weighted average with a `coverage` indicator | Train and calibrate a scorer on labelled data |
 

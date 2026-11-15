@@ -10,6 +10,7 @@ Exit codes used by every script:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,9 +52,14 @@ def rel(path: Path) -> str:
         return str(path)
 
 
+def work_root() -> Path:
+    """Base for relative dataset/model paths; CIVIC_AI_WORK_ROOT overrides it (used by tests)."""
+    return Path(os.environ.get("CIVIC_AI_WORK_ROOT") or AI_ROOT)
+
+
 def resolve(path_str: str) -> Path:
     path = Path(path_str)
-    return path if path.is_absolute() else AI_ROOT / path
+    return path if path.is_absolute() else work_root() / path
 
 
 @dataclass

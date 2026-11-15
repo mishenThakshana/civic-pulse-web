@@ -2,8 +2,10 @@
  CIVI PULSE AI - PROJECT DATASET REQUIREMENTS
 ===============================================================================
 
-Status      : NO DATASET HAS BEEN SELECTED OR COLLECTED YET.
-              No model in this repository has been trained.
+Status      : First datasets built from public sources (see
+              datasets/README_DATASET.txt); image, text-category and spam
+              models trained (models/README_MODELS.txt). Sinhala/Tamil,
+              severity, consistency and duplicate datasets are still needed.
 Audience    : project team, annotators, supervisors, reviewers.
 Applies to  : everything under civi-pulse/ai/
 

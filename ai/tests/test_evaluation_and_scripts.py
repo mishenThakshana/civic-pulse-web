@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -129,8 +130,10 @@ def test_image_folder_check(tmp_path):
         ["scripts/evaluate.py"],
     ],
 )
-def test_scripts_report_missing_dataset(args):
-    proc = subprocess.run([sys.executable, *args], cwd=AI_ROOT, capture_output=True, text=True, timeout=120)
+def test_scripts_report_missing_dataset(args, tmp_path):
+    # An empty work root: the scripts must report the dataset as missing (and never touch the real models/).
+    env = {**os.environ, "CIVIC_AI_WORK_ROOT": str(tmp_path)}
+    proc = subprocess.run([sys.executable, *args], cwd=AI_ROOT, capture_output=True, text=True, timeout=120, env=env)
     assert proc.returncode == _common.EXIT_MISSING, proc.stdout + proc.stderr
 
 

@@ -4,7 +4,7 @@
   "classification_dataset_dir": "datasets/processed/image_classification",
   "detection_data_yaml": "datasets/processed/image_detection/data.yaml",
   "base_weights": {
-    "classify": "yolo11n-cls.pt",
+    "classify": "models/base/yolo11n-cls.pt",
     "detect": "yolo11n.pt"
   },
   "epochs": 50,

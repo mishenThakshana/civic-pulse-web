@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from _common import EXIT_OK, DatasetCheck, check_csv_splits, load_config, not_implemented, resolve
+from _common import EXIT_OK, DatasetCheck, check_csv_splits, load_config, resolve
 
 REQUIRED_COLUMNS = ["report_id", "description", "is_spam", "spam_type"]
 SPAM_TYPES = ["legitimate", "irrelevant", "promotional", "nonsense", "abusive", "duplicate_like", "other"]
@@ -57,19 +57,115 @@ def main(argv: list[str] | None = None) -> int:
     if code != EXIT_OK or args.validate_only:
         return code
 
-    return not_implemented(
-        "spam model training",
-        [
-            "Compute features for every row with SpamService.extract_features (same code as inference) so "
-            "columns match app.models.spam_model.SPAM_FEATURE_COLUMNS + 'description'.",
-            "Pipeline: ColumnTransformer[TfidfVectorizer(analyzer='char_wb', ngram_range=(2,5)) on description, "
-            "passthrough numeric features] -> LogisticRegression(class_weight='balanced').",
-            "Tune on VAL; choose SPAM_THRESHOLD with app.evaluation.metrics.threshold_sweep on VAL.",
-            f"joblib.dump(pipeline, '{config['output_path']}') and set SPAM_MODEL_PATH in .env.",
-            "Evaluate once on TEST with scripts/evaluate.py.",
-        ],
-    )
+    return train(config, frames)
 
+
+def build_features(df):
+    """Same feature code as inference (SpamService.extract_features).
+
+    Training rows carry no photo and no trustworthy coordinates, so image and
+    location features are neutral (a point inside the service area, no image).
+    """
+    import pandas as pd
+
+    from app.core.config import Settings
+    from app.models.spam_model import SPAM_FEATURE_COLUMNS, SPAM_TEXT_COLUMN
+    from app.schemas.report import ReportInput
+    from app.services.spam_service import SpamService
+    from app.utils.text import normalize_text
+
+    settings = Settings()
+    lat = (settings.service_area_min_lat + settings.service_area_max_lat) / 2
+    lon = (settings.service_area_min_lon + settings.service_area_max_lon) / 2
+    service = SpamService(model=None, settings=settings)  # type: ignore[arg-type]
+    rows = []
+    for i, text in enumerate(df["description"].astype(str)):
+        text = normalize_text(text)
+        report = ReportInput(report_id=f"r{i}", description=text, latitude=lat, longitude=lon)
+        rows.append(service.extract_features(text, report, None))
+    return pd.DataFrame(rows)[[*SPAM_FEATURE_COLUMNS, SPAM_TEXT_COLUMN]]
+
+
+def train(config, frames) -> int:
+    import json
+
+    import joblib
+    import numpy as np
+    from sklearn.compose import ColumnTransformer
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    from app.evaluation.metrics import threshold_sweep
+    from app.models.spam_model import SPAM_FEATURE_COLUMNS, SPAM_TEXT_COLUMN
+
+    def xy(split):
+        df = frames[split]
+        y = df["is_spam"].astype(str).str.strip().str.lower().isin({"1", "true"}).astype(int).to_numpy()
+        return build_features(df), y
+
+    x_train, y_train = xy("train")
+    x_val, y_val = xy("val")
+    x_test, y_test = xy("test")
+
+    tf = config["tfidf"]
+    pipeline = Pipeline(
+        [
+            (
+                "features",
+                ColumnTransformer(
+                    [
+                        (
+                            "text",
+                            TfidfVectorizer(
+                                analyzer=tf["analyzer"], ngram_range=tuple(tf["ngram_range"]), min_df=tf["min_df"],
+                                sublinear_tf=True,
+                            ),
+                            SPAM_TEXT_COLUMN,
+                        ),
+                        ("numeric", StandardScaler(), list(SPAM_FEATURE_COLUMNS)),
+                    ]
+                ),
+            ),
+            (
+                "clf",
+                LogisticRegression(
+                    class_weight=config["class_weight"], max_iter=2000, random_state=config["seed"], C=4.0
+                ),
+            ),
+        ]
+    )
+    pipeline.fit(x_train, y_train)
+
+    # Choose the decision threshold on VALIDATION only (best F1).
+    val_scores = pipeline.predict_proba(x_val)[:, 1]
+    sweep = threshold_sweep(y_val.tolist(), val_scores.tolist())
+    best = max(sweep, key=lambda r: r["f1"])
+    threshold = float(best["threshold"])
+
+    out = resolve(config["output_path"])
+    out.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(pipeline, out)
+
+    test_scores = pipeline.predict_proba(x_test)[:, 1]
+    test_pred = (test_scores >= threshold).astype(int)
+    import pandas as pd
+
+    pred = pd.DataFrame(
+        {
+            "report_id": frames["test"]["report_id"],
+            "y_true": y_test,
+            "y_pred": test_pred,
+            "y_score": np.round(test_scores, 5),
+            "spam_type": frames["test"]["spam_type"],
+        }
+    )
+    pred.to_csv(out.parent / "test_predictions.csv", index=False)
+    summary = {"validation_threshold": threshold, "validation_best": best, "train_rows": int(len(y_train))}
+    (out.parent / "train_summary.json").write_text(json.dumps(summary, indent=2, default=float))
+    print(f"[train] saved {out}; threshold chosen on VAL = {threshold:.2f}; TEST predictions written")
+    return EXIT_OK
 
 if __name__ == "__main__":
     sys.exit(main())
