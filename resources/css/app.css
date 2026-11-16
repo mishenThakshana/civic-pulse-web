@@ -588,6 +588,7 @@ input, select, textarea {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 16px 18px;
+  min-width: 0;
 }
 
 .stat-label {
@@ -604,7 +605,8 @@ input, select, textarea {
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.5px;
-  line-height: 1;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .stat-change {

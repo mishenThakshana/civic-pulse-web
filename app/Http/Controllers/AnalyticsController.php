@@ -45,9 +45,14 @@ class AnalyticsController extends Controller
         ]);
     }
 
+    /**
+     * Median hours between a report being submitted and the first update
+     * posted on it. The relation is ordered newest-first by default, so it is
+     * re-ordered here; otherwise the second-newest update would be measured.
+     */
     private function medianFirstResponseHours(): ?float
     {
-        $hours = Report::with(['statusHistory' => fn ($q) => $q->oldest()])
+        $hours = Report::with(['statusHistory' => fn ($q) => $q->reorder()->oldest()->oldest('id')])
             ->get()
             ->map(function (Report $report) {
                 $secondEntry = $report->statusHistory->skip(1)->first();
@@ -64,8 +69,10 @@ class AnalyticsController extends Controller
 
         $middle = intdiv($hours->count(), 2);
 
-        return $hours->count() % 2 === 0
-            ? round(($hours[$middle - 1] + $hours[$middle]) / 2, 1)
-            : (float) $hours[$middle];
+        $median = $hours->count() % 2 === 0
+            ? ($hours[$middle - 1] + $hours[$middle]) / 2
+            : $hours[$middle];
+
+        return round($median, 1);
     }
 }

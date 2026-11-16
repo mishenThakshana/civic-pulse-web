@@ -29,7 +29,7 @@
   </div>
   <div class="stat-card">
     <div class="stat-label">Median First Response</div>
-    <div class="stat-value">{{ $medianFirstResponseHours !== null ? $medianFirstResponseHours.'h' : '—' }}</div>
+    <div class="stat-value">{{ \App\Support\Duration::hours($medianFirstResponseHours) }}</div>
   </div>
 </div>
 
