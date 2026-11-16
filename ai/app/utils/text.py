@@ -64,11 +64,29 @@ def script_ratios(text: str) -> dict[str, float]:
     return {k: v / letters for k, v in counts.items()}
 
 
-def detect_language(text: str) -> str:
-    """Script-based language guess: ``en``, ``si``, ``ta``, ``mixed`` or ``unknown``.
+# Very common romanised Sinhala ("Singlish") words. Rule-based, not a trained
+# language-id model: it only needs to stop romanised Sinhala being treated as
+# English by the English-only models.
+ROMANISED_SINHALA_WORDS = frozenset({
+    "eke", "ekak", "ekata", "eka", "thiyenawa", "thiyanawa", "tiyenawa", "thibba", "nehe", "naha",
+    "wela", "welaa", "karanna", "karala", "ganna", "gaththa", "ehema", "mokak", "mokada", "pare",
+    "paara", "paare", "gaha", "kanuwa", "kaanuwa", "wathura", "kunu", "loku", "lokui", "podi",
+    "hari", "nisa", "wage", "neda", "oya", "mama", "api", "ape", "mage", "dawas", "dawasak",
+    "wala", "walak", "lamba", "lampuwa", "padinna", "yanna", "enna", "inne", "innawa", "wenawa",
+})
 
-    Romanised Sinhala/Tamil ("Singlish"/"Tanglish") is detected as ``en``; a
-    trained language-id model can replace this later.
+
+def looks_romanised_sinhala(text: str) -> bool:
+    """True if Latin-script text contains at least two distinct common Singlish words."""
+    tokens = set(re.findall(r"[a-z]+", text.lower()))
+    return len(tokens & ROMANISED_SINHALA_WORDS) >= 2
+
+
+def detect_language(text: str) -> str:
+    """Script-based language guess: ``en``, ``si``, ``ta``, ``si-latn``, ``mixed`` or ``unknown``.
+
+    ``si-latn`` is romanised Sinhala ("Singlish"), recognised by common words
+    (``looks_romanised_sinhala``). A trained language-id model can replace this later.
     """
     ratios = script_ratios(text)
     dominant = max(ratios, key=ratios.get)  # type: ignore[arg-type]
@@ -76,7 +94,10 @@ def detect_language(text: str) -> str:
         return "unknown"
     if ratios[dominant] < 0.7:
         return "mixed"
-    return {"latin": "en", "sinhala": "si", "tamil": "ta"}.get(dominant, "unknown")
+    language = {"latin": "en", "sinhala": "si", "tamil": "ta"}.get(dominant, "unknown")
+    if language == "en" and looks_romanised_sinhala(text):
+        return "si-latn"
+    return language
 
 
 def contains_url(text: str) -> bool:

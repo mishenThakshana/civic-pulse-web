@@ -26,6 +26,7 @@ class ComponentStatus(str, Enum):
     HEURISTIC = "heuristic"
     MODEL_NOT_LOADED = "model_not_loaded"
     INSUFFICIENT_DATA = "insufficient_data"
+    UNSUPPORTED_LANGUAGE = "unsupported_language"
     ERROR = "error"
 
     @property

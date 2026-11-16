@@ -228,3 +228,19 @@ def test_low_validity_requests_review():
     result = pipeline.analyze(make_report(), loaded_image(pattern="dark"))
     assert "possible_spam" in result.review_reasons
     assert "low_validity_score" in result.review_reasons
+
+
+def test_non_english_report_uses_image_only_and_language_independent_spam_rules():
+    pipeline = build_pipeline(
+        image=StubImageModel({"pothole": 0.9, "garbage": 0.1}),
+        text=StubTextModel({"garbage": 1.0}),
+        spam=StubSpamModel(0.95),
+    )
+    report = make_report(description="පාරේ ලොකු වළක් තියෙනවා, බයිසිකල් පදින අයට අනතුරුදායකයි")
+    result = pipeline.analyze(report, loaded_image())
+
+    assert result.text.status == ComponentStatus.UNSUPPORTED_LANGUAGE
+    assert result.text.language == "si"
+    assert result.category.label == "pothole"
+    assert result.category.source == "image"
+    assert result.spam.is_suspicious is False

@@ -75,3 +75,27 @@ def test_heuristics_disabled_reports_model_not_loaded():
 def test_invalid_threshold_rejected():
     with pytest.raises(ValueError):
         make_settings(spam_threshold=1.5)
+
+
+SINHALA_REPORT = "පාරේ ලොකු වළක් තියෙනවා, බයිසිකල් පදින අයට අනතුරුදායකයි"
+
+
+def test_unsupported_language_does_not_use_the_english_spam_model():
+    result = service(probability=0.95).analyze(SINHALA_REPORT, make_report(), None, language="si")
+    assert result.status == ComponentStatus.HEURISTIC
+    assert "spam model not used for 'si'" in result.method
+    assert result.is_suspicious is False
+    assert result.probability == pytest.approx(PRIOR)
+
+
+def test_unsupported_language_spam_is_still_caught_by_the_rules():
+    text = SINHALA_REPORT + " www.cheap-deals.example call now 0771234567 best price"
+    result = service(probability=0.01).analyze(text, make_report(), None, language="si")
+    assert result.is_suspicious is True
+    assert {"contains_url", "contains_contact_details", "promotional_keyword"} <= set(result.reasons)
+
+
+def test_model_language_still_uses_the_trained_spam_model():
+    result = service(probability=0.95).analyze("Win a free phone, click now", make_report(), None, language="en")
+    assert result.status == ComponentStatus.OK
+    assert result.is_suspicious is True

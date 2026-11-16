@@ -3,7 +3,7 @@
 An independent Python AI service for **Civi Pulse**. It analyses citizen infrastructure reports (photo + description + location) and returns advisory signals for the council: issue category, spam probability, severity, image/text consistency, duplicate probability and an overall validity score.
 
 > **Status: three trained models (image category, text category, spam).**
-> They were trained on public data (see `datasets/README_DATASET.txt`) and their test results are in `models/README_MODELS.txt`. Weights are git-ignored and are enabled with `IMAGE_MODEL_PATH`, `TEXT_MODEL_NAME` and `SPAM_MODEL_PATH`. Severity, consistency and duplicate models are not trained. With no models configured, the API still runs: components that need a model return `"status": "model_not_loaded"` and components with a documented rule-based fallback return `"status": "heuristic"`.
+> They were trained on public data (see `datasets/README_DATASET.txt`) and their test results are in `models/README_MODELS.txt`. The text and spam models are English-only (`MODEL_LANGUAGES=en`): reports in other languages are still analysed, but get their category from the photo and are spam-checked with the language-independent rules. Weights are git-ignored and are enabled with `IMAGE_MODEL_PATH`, `TEXT_MODEL_NAME` and `SPAM_MODEL_PATH`. Severity, consistency and duplicate models are not trained. With no models configured, the API still runs: components that need a model return `"status": "model_not_loaded"` and components with a documented rule-based fallback return `"status": "heuristic"`.
 
 The service lives entirely in `ai/`. It does not touch the mobile app (`app/`) or the council dashboard/backend (`web/`), and it talks to them only through REST.
 
@@ -94,7 +94,7 @@ Design rules:
 
 - **Model abstraction.** Services depend only on abstract interfaces with `load()`, `is_ready()` and `predict()`/`encode()`. The API has no knowledge of YOLO or Transformers. You can swap an implementation in one place, `ModelRegistry.from_settings`.
 - **Startup never fails because of models.** Missing or broken weights are logged and reported by `/api/v1/models`. Heavy libraries are imported lazily inside `load()`. Nothing is downloaded at startup (`ALLOW_MODEL_DOWNLOAD=false` passes `local_files_only=True`).
-- **Honest statuses.** Every result block carries a `status` (`ok`, `heuristic`, `model_not_loaded`, `insufficient_data` or `error`) and a `method`.
+- **Honest statuses.** Every result block carries a `status` (`ok`, `heuristic`, `model_not_loaded`, `insufficient_data`, `unsupported_language` or `error`) and a `method`.
 - **Failure isolation.** If one component raises, only that block returns `status: "error"`. The rest of the analysis still runs.
 - **Stateless, no database.** Duplicate candidates come from the backend.
 - **Privacy.** EXIF (including GPS) is dropped on load. Descriptions and images are never logged or stored.
@@ -272,6 +272,7 @@ Errors always have the shape `{"error": {"code", "message", "details"}}`:
 | `heuristic` | produced by a documented rule-based development fallback. It is **not** a trained model |
 | `model_not_loaded` | the required model is not configured. Value fields are `null` |
 | `insufficient_data` | required input missing, e.g. no duplicate candidates |
+| `unsupported_language` | the text is in a language the trained model was not trained on (see `MODEL_LANGUAGES`). Value fields are `null` |
 | `error` | this component failed. Other components still ran |
 
 ## 12. Example API requests

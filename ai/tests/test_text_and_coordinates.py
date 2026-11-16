@@ -42,6 +42,8 @@ def test_normalize_is_nfc():
         (TAMIL, "ta"),
         ("pothole near school පාසල අසල වළක්", "mixed"),
         ("12345 !!!", "unknown"),
+        ("road eke loku wala ekak thiyenawa", "si-latn"),
+        ("The API for the street light is down", "en"),
     ],
 )
 def test_detect_language(text, lang):

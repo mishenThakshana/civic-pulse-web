@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     image_model_path: Path | None = None
     # Local path to a trained scikit-learn spam pipeline (.joblib).
     spam_model_path: Path | None = None
+    # Languages the trained text and spam models were trained on. Reports in
+    # any other language are still analysed, but the text model is skipped and
+    # spam is judged by the language-independent rules only.
+    model_languages: list[str] = ["en"]
     # Multimodal screening model (Gemini). Empty key => model_not_loaded and the
     # per-component models / heuristics are used instead.
     gemini_api_key: str | None = None

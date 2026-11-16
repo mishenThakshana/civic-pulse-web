@@ -142,9 +142,27 @@ class SpamService:
         text: str,
         report: ReportInput,
         image: ImageAnalysis | None,
+        language: str | None = None,
     ) -> SpamResult:
         threshold = self.settings.spam_threshold
         features = self.extract_features(text, report, image)
+
+        if language is not None and language not in self.settings.model_languages and self.model.is_ready():
+            # The trained spam model has only seen the model languages; on other
+            # text it would score genuine reports as spam. Use the
+            # language-independent rules (links, contact details, nonsense,
+            # location) so reports in every language can still be submitted.
+            probability, reasons = self.heuristic_score(features)
+            return SpamResult(
+                status=ComponentStatus.HEURISTIC,
+                method=f"{HEURISTIC_METHOD}; spam model not used for '{language}'",
+                probability=probability,
+                is_suspicious=probability >= threshold,
+                threshold=threshold,
+                reasons=reasons,
+                message=f"The spam model supports {', '.join(self.settings.model_languages)} only; "
+                "language-independent rules were used.",
+            )
 
         if self.model.is_ready():
             try:

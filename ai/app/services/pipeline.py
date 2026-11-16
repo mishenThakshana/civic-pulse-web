@@ -165,7 +165,7 @@ class ReportAnalysisPipeline:
                 ConsistencyResult, "consistency", threshold=s.consistency_threshold,
             )
             spam = _guard(
-                lambda: self.spam_service.analyze(text, report, image_result),
+                lambda: self.spam_service.analyze(text, report, image_result, text_result.language),
                 SpamResult, "spam", threshold=s.spam_threshold,
             )
             severity = _guard(

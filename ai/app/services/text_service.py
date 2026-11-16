@@ -57,6 +57,16 @@ class TextService:
                 ),
                 embedding,
             )
+        if language not in self.settings.model_languages:
+            return (
+                TextAnalysis(
+                    status=ComponentStatus.UNSUPPORTED_LANGUAGE,
+                    message=f"The text model supports {', '.join(self.settings.model_languages)} only; "
+                    f"'{language}' is not supported yet.",
+                    **base,
+                ),
+                embedding,
+            )
         try:
             prediction = self.classifier.predict(text)
         except Exception as exc:  # noqa: BLE001
