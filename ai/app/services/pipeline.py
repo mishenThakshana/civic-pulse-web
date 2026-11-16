@@ -8,9 +8,9 @@
     Report + Candidates        -> DuplicateService
     All results                -> ValidityScorer
 
-When the multimodal screening model is loaded it assesses photo + text in a
-single pass and supplies category, spam, severity and consistency; if it is
-not loaded (or fails) the per-component services above are used instead.
+Text in a language the trained models do not support (see MODEL_LANGUAGES)
+skips the text model; its category comes from the image and its spam check
+uses the language-independent rules.
 
 Each component is isolated: a failure produces ``status="error"`` for that
 component only. The pipeline is stateless and never stores, deletes or
@@ -26,7 +26,6 @@ from typing import TypeVar
 
 from app.core.config import Settings
 from app.core.logging import get_logger
-from app.models.multimodal_model import MultimodalAssessment
 from app.models.registry import ModelRegistry
 from app.schemas.analysis import (
     AnalysisMeta,
@@ -127,51 +126,19 @@ class ReportAnalysisPipeline:
             logger.exception("Component 'text' failed")
             text_result, embedding = TextAnalysis(status=ComponentStatus.ERROR, message=f"text failed: {type(exc).__name__}"), None
 
-        assessment = self._assess_multimodal(image, text, report)
-        if assessment is not None:
-            method = self.registry.multimodal.name
-            image_result = image_result.model_copy(update={
-                "status": ComponentStatus.OK,
-                "method": method,
-                "message": None,
-                "label": assessment.category,
-                "confidence": assessment.category_confidence,
-                "scores": {assessment.category: assessment.category_confidence},
-                "detections": 1 if assessment.image_shows_issue else 0,
-            })
-            category = CategoryResult(
-                status=ComponentStatus.OK, method=method, label=assessment.category,
-                confidence=assessment.category_confidence, source="image+text",
-            )
-            consistency = ConsistencyResult(
-                status=ComponentStatus.OK, method=method, score=assessment.consistency_score,
-                is_consistent=assessment.consistency_score >= s.consistency_threshold,
-                threshold=s.consistency_threshold,
-            )
-            spam = SpamResult(
-                status=ComponentStatus.OK, method=method, probability=assessment.spam_probability,
-                is_suspicious=assessment.spam_probability >= s.spam_threshold,
-                threshold=s.spam_threshold, reasons=assessment.spam_reasons,
-                message=assessment.summary or None,
-            )
-            severity = SeverityResult(
-                status=ComponentStatus.OK, method=method, label=assessment.severity,
-                confidence=assessment.severity_confidence,
-            )
-        else:
-            category = _guard(lambda: fuse_category(image_result, text_result), CategoryResult, "category")
-            consistency = _guard(
-                lambda: self.consistency_service.analyze(image_result, text_result, embedding),
-                ConsistencyResult, "consistency", threshold=s.consistency_threshold,
-            )
-            spam = _guard(
-                lambda: self.spam_service.analyze(text, report, image_result, text_result.language),
-                SpamResult, "spam", threshold=s.spam_threshold,
-            )
-            severity = _guard(
-                lambda: self.severity_service.analyze(text, text_result.language, category.label),
-                SeverityResult, "severity",
-            )
+        category = _guard(lambda: fuse_category(image_result, text_result), CategoryResult, "category")
+        consistency = _guard(
+            lambda: self.consistency_service.analyze(image_result, text_result, embedding),
+            ConsistencyResult, "consistency", threshold=s.consistency_threshold,
+        )
+        spam = _guard(
+            lambda: self.spam_service.analyze(text, report, image_result, text_result.language),
+            SpamResult, "spam", threshold=s.spam_threshold,
+        )
+        severity = _guard(
+            lambda: self.severity_service.analyze(text, text_result.language, category.label),
+            SeverityResult, "severity",
+        )
         duplicate = _guard(
             lambda: self.duplicate_service.analyze(report, text, image_result.perceptual_hash, provider, embedding),
             DuplicateResult, "duplicate", threshold=s.duplicate_threshold,
@@ -218,22 +185,6 @@ class ReportAnalysisPipeline:
             report.report_id, response.meta.processing_ms, response.requires_human_review,
         )
         return response
-
-    def _assess_multimodal(self, image: LoadedImage, text: str, report: ReportInput) -> MultimodalAssessment | None:
-        model = self.registry.multimodal
-        if not model.is_ready():
-            return None
-        s = self.settings
-        in_area = (
-            s.service_area_min_lat <= report.latitude <= s.service_area_max_lat
-            and s.service_area_min_lon <= report.longitude <= s.service_area_max_lon
-        )
-        context = f"Location {'inside' if in_area else 'OUTSIDE'} the expected service area (Sri Lanka)."
-        try:
-            return model.assess(image.image, text, context)
-        except Exception as exc:  # noqa: BLE001 - fall back to the per-component models
-            logger.warning("Multimodal model failed, falling back: %s", type(exc).__name__)
-            return None
 
 
 def _guard(fn: Callable[[], R], result_type: type[R], name: str, **defaults) -> R:

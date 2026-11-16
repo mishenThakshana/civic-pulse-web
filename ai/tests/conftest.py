@@ -18,7 +18,6 @@ from app.core.config import Settings
 from app.main import create_app
 from app.models.embedding_model import EmbeddingModel
 from app.models.image_model import ImageModel, ImagePrediction
-from app.models.multimodal_model import MultimodalAssessment, MultimodalModel
 from app.models.registry import ModelRegistry
 from app.models.spam_model import SpamModel
 from app.models.text_model import TextModel, TextPrediction
@@ -38,7 +37,6 @@ def make_settings(**overrides: Any) -> Settings:
         "embedding_model_name": None,
         "image_model_path": None,
         "spam_model_path": None,
-        "gemini_api_key": None,
         "enable_heuristic_fallbacks": True,
         "log_level": "WARNING",
     }
@@ -195,21 +193,6 @@ class FailingImageModel(StubImageModel):
         raise RuntimeError("boom")
 
 
-class StubMultimodalModel(MultimodalModel):
-    def __init__(self, assessment: MultimodalAssessment | None) -> None:
-        super().__init__("stub-multimodal")
-        self._assessment = assessment
-        self.calls = 0
-
-    def _load(self) -> None:
-        pass
-
-    def assess(self, image: Image.Image, description: str, context: str = "") -> MultimodalAssessment:
-        self._require_ready()
-        self.calls += 1
-        if self._assessment is None:
-            raise RuntimeError("boom")
-        return self._assessment
 
 
 def build_registry(settings: Settings, *, load: bool = True, **models: Any) -> ModelRegistry:

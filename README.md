@@ -51,7 +51,7 @@ Per-department API keys (read-only, or read & update). Departments pull the repo
 
 ### AI report screening
 
-New reports are screened by the `ai/` service (Gemini 3.5 Flash-Lite, falling back to 3.1 Flash-Lite) before anything is stored. Reports flagged as spam or scams are refused with a `422`. If the service is unreachable, reports are refused too (fail closed) unless `CIVIC_AI_FAIL_OPEN=true`. See [ai/README.md](ai/README.md).
+New reports are screened by the `ai/` service, using the project's own trained image, text and spam models, before anything is stored. The text and spam models are English-only for now: reports in other languages are still accepted, take their category from the photo and are spam-checked by language-independent rules. Reports flagged as spam or scams are refused with a `422`. If the service is unreachable, reports are refused too (fail closed) unless `CIVIC_AI_FAIL_OPEN=true`. See [ai/README.md](ai/README.md).
 
 ## Roles and permissions
 
@@ -111,7 +111,7 @@ npm run dev   # in a second terminal, for Vite HMR
 
 - you run the AI service on the port `.env.example` expects:
   ```
-  cd ai && cp .env.example .env    # add a GEMINI_API_KEY for real screening
+  cd ai && cp .env.example .env    # set the model paths for real screening (see ai/models/README_MODELS.txt)
   pip install -r requirements.txt  # see ai/README.md for CPU-only torch
   uvicorn app.main:app --reload --port 8001
   ```
@@ -149,7 +149,7 @@ The variables beyond Laravel's defaults:
 | `CIVIC_AI_URL` | `.env` | AI service base URL. Default `http://127.0.0.1:8001`; Docker Compose overrides it to `http://ai:8000`. |
 | `CIVIC_AI_TIMEOUT` | `.env` | Seconds to wait for screening. Default `25`. |
 | `CIVIC_AI_FAIL_OPEN` | `.env` | `true` accepts reports when the AI service is down. Default `false`, which refuses them. |
-| `GEMINI_API_KEY` | `ai/.env` | Enables the multimodal screening model. In production the deploy job writes this from a GitHub secret. Other AI settings are documented in `ai/.env.example`. |
+| `IMAGE_MODEL_PATH`, `TEXT_MODEL_NAME`, `SPAM_MODEL_PATH` | `ai/.env` | The trained screening models. In production the deploy job writes these when the model files are present in `ai/models`. Other AI settings are documented in `ai/.env.example`. |
 
 ## APIs
 
@@ -204,7 +204,7 @@ The multi-stage `Dockerfile` has two targets:
 ```
 cp .env.docker.example .env
 # fill in APP_KEY (see below), DB_PASSWORD, DB_ROOT_PASSWORD
-cp ai/.env.example ai/.env   # optional: add GEMINI_API_KEY
+cp ai/.env.example ai/.env   # optional: set the trained model paths
 
 docker compose build
 docker compose up -d
@@ -249,7 +249,7 @@ Start from `.env.docker.example`. It differs from `.env.example` in a few Docker
    - `ghcr.io/mishenthakshana/civic-pulse-ai`
 4. **deploy** *(main only)*: runs one at a time. A deploy started while another is running waits for it, rather than both recreating containers at once. It SSHes into the VPS and:
    - hard-resets its git clone to `origin/main`, so `docker-compose.yml`, nginx config and the rest stay in sync, not just the images;
-   - rewrites `ai/.env` from the `GEMINI_API_KEY` secret;
+   - rewrites `ai/.env`, enabling each trained model whose file is present in `ai/models`;
    - pulls the new images, retrying up to 5 times with backoff because GHCR occasionally drops large layer downloads, then runs `docker compose up -d` and `migrate --force`. If the pull still fails, nothing is restarted and the previous release keeps running;
    - waits up to ~90 s for the AI service's health check, failing the deploy (with its logs) if it doesn't come up;
    - prunes old images.
@@ -264,7 +264,6 @@ Set these under the repo's **Settings → Secrets and variables → Actions**:
 | `VPS_USER` | SSH user to deploy as |
 | `VPS_SSH_KEY` | Private key of a dedicated deploy keypair (see below) |
 | `VPS_PORT` | *(optional)* SSH port; defaults to 22 |
-| `GEMINI_API_KEY` | Google Gemini API key for AI screening. Without it the AI service can't screen, and new reports are refused. |
 
 `GITHUB_TOKEN` (used to push to GHCR) is provided automatically. Once the first images are pushed, check that the packages' visibility under **Packages** is what you want.
 
@@ -296,7 +295,7 @@ The VPS already runs other sites behind its own nginx, systemd and Postgres. Thi
    php -r "echo 'base64:'.base64_encode(random_bytes(32)), PHP_EOL;"   # → APP_KEY
    openssl rand -base64 32   # → DB_PASSWORD / DB_ROOT_PASSWORD
    ```
-   Set `APP_URL` to the public `https://` domain. If you need push notifications, also put your Firebase service-account JSON at `storage/app/firebase-service-account.json` inside the `storage-data` volume (see [Docker](#docker)). You don't need to create `ai/.env` by hand: every deploy writes it from the `GEMINI_API_KEY` secret.
+   Set `APP_URL` to the public `https://` domain. If you need push notifications, also put your Firebase service-account JSON at `storage/app/firebase-service-account.json` inside the `storage-data` volume (see [Docker](#docker)). You don't need to create `ai/.env` by hand: every deploy writes it. Copy the trained model files to `ai/models` once (see `ai/models/README_MODELS.txt`).
 
 5. **First deploy:**
    ```
@@ -371,7 +370,7 @@ A plain `docker compose restart` does **not** pick up `.env` changes; it only re
 
 | Symptom | Likely cause |
 |---|---|
-| Every new report is refused with a screening error | The AI service is down, or `GEMINI_API_KEY` is missing or invalid. Check `docker compose logs ai`. As a stop-gap, `CIVIC_AI_FAIL_OPEN=true` accepts reports unscreened. |
+| Every new report is refused with a screening error | The AI service is down. Check `docker compose logs ai` and `GET /api/v1/models` on the AI service. As a stop-gap, `CIVIC_AI_FAIL_OPEN=true` accepts reports unscreened. |
 | Report photos don't load in the Android app | `APP_URL` isn't `https://…`, so links are generated as `http://`. |
 | Push notifications never arrive | `FIREBASE_CREDENTIALS` is missing or unreadable. Sends are skipped and logged. |
 | A department's integration returns `401` | Its key was revoked, or the wrong key is being sent. Check **Departments → API access** for the key prefix and last-used time. |

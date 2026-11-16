@@ -31,6 +31,9 @@ How to maintain this file is described in the [README](README.md#maintaining-the
 - Panel report updates and API report updates now share one code path (`ReportUpdateService`). History, citizen notifications and audit entries are identical whichever way an update arrives.
 - Any posted status update now bumps the report's `updated_at`, so `updated_since` syncs pick up note-only updates too.
 
+### Removed
+- **External multimodal screening model.** The adapter, its settings and its tests are removed, and the AI service no longer makes outbound model calls. The `GEMINI_API_KEY` GitHub secret is no longer used and can be deleted.
+
 ### Fixed
 - **Negative resolution and response times.** The dashboard's average resolution time, each department's average resolution time and the analytics page's median first response were shown as negative numbers (for example "-5.6d"), because Carbon 3 returns a signed difference and the dates were compared in the wrong order. They are now measured forwards from submission. Covered by `AnalyticsPanelTest`.
 - **Deploys failing on a dropped image download.** A deploy failed when GHCR reset the connection mid-download of the AI image. The deploy now retries `docker compose pull` up to 5 times with backoff, and uses `--quiet` so per-layer progress no longer floods the Actions log. A failed pull leaves the previous release running, because `up -d` and the migrations never run.

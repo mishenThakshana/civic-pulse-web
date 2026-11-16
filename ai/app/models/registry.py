@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from app.core.config import Settings
 from app.models.embedding_model import EmbeddingModel, SentenceTransformerEmbeddingModel
 from app.models.image_model import ImageModel, YoloImageModel
-from app.models.multimodal_model import GeminiMultimodalModel, MultimodalModel
 from app.models.spam_model import SklearnSpamModel, SpamModel
 from app.models.text_model import TextModel, TransformersTextClassifier
 from app.schemas.analysis import ModelStatus
@@ -32,7 +31,6 @@ class ModelRegistry:
     severity: TextModel
     embedding: EmbeddingModel
     spam: SpamModel
-    multimodal: MultimodalModel
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "ModelRegistry":
@@ -58,22 +56,15 @@ class ModelRegistry:
                 allow_download=settings.allow_model_download,
             ),
             spam=SklearnSpamModel(settings.spam_model_path),
-            multimodal=GeminiMultimodalModel(
-                settings.gemini_api_key,
-                settings.gemini_model,
-                fallback_model_name=settings.gemini_fallback_model,
-                timeout_seconds=settings.gemini_timeout_seconds,
-            ),
         )
 
-    def all(self) -> dict[str, "ImageModel | TextModel | EmbeddingModel | SpamModel | MultimodalModel"]:
+    def all(self) -> dict[str, "ImageModel | TextModel | EmbeddingModel | SpamModel"]:
         return {
             "image": self.image,
             "text": self.text,
             "severity": self.severity,
             "embedding": self.embedding,
             "spam": self.spam,
-            "multimodal": self.multimodal,
         }
 
     def load_all(self) -> None:

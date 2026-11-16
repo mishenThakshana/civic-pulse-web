@@ -62,7 +62,7 @@ def test_registry_statuses():
     registry = ModelRegistry.from_settings(make_settings())
     registry.load_all()
     statuses = registry.statuses()
-    assert set(statuses) == {"image", "text", "severity", "embedding", "spam", "multimodal"}
+    assert set(statuses) == {"image", "text", "severity", "embedding", "spam"}
     assert not any(s.ready for s in statuses.values())
 
 
