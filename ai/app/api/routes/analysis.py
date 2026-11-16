@@ -86,7 +86,7 @@ async def analyze(
     settings: Settings = Depends(get_app_settings),
     pipeline: ReportAnalysisPipeline = Depends(get_pipeline),
 ) -> AnalysisResponse:
-    """Run the full analysis.
+    """Run the full multimodal analysis.
 
     Results are advisory: the service flags reports for human review and never
     deletes or rejects them. Each block carries a ``status`` telling whether

@@ -103,7 +103,7 @@ Design rules:
 
 ## 3. Technology stack
 
-Python 3.11+, FastAPI, Pydantic v2 (+ pydantic-settings), Uvicorn, PyTorch, Ultralytics YOLO, OpenCV, Pillow, NumPy, Pandas, scikit-learn, Hugging Face Transformers, Sentence Transformers, pytest and Docker. The service does not use LangChain or any external LLM API.
+Python 3.11+, FastAPI, Pydantic v2 (+ pydantic-settings), Uvicorn, PyTorch, Ultralytics YOLO, OpenCV, Pillow, NumPy, Pandas, scikit-learn, Hugging Face Transformers, Sentence Transformers, pytest and Docker. The main screening model is Gemini, called over its REST API with `httpx`; the trained models above are its fallback. No LangChain.
 
 ---
 

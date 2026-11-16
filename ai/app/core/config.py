@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     # any other language are still analysed, but the text model is skipped and
     # spam is judged by the language-independent rules only.
     model_languages: list[str] = ["en"]
+    # Multimodal screening model (Gemini). Empty key => model_not_loaded and the
+    # per-component models / heuristics are used instead.
+    gemini_api_key: str | None = None
+    # Flash-Lite models have the highest free-tier quota and handle photo + text.
+    gemini_model: str = "gemini-3.5-flash-lite"
+    gemini_fallback_model: str | None = "gemini-3.1-flash-lite"
+    gemini_timeout_seconds: float = Field(default=20.0, gt=0)
 
     # When false, Hugging Face models are loaded with local_files_only=True so
     # nothing is downloaded at API startup.
@@ -89,6 +96,7 @@ class Settings(BaseSettings):
         "embedding_model_name",
         "image_model_path",
         "spam_model_path",
+        "gemini_api_key",
         mode="before",
     )
     @classmethod

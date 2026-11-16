@@ -164,20 +164,24 @@ jobs:
     steps:
       - name: Deploy to VPS over SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          envs: GEMINI_API_KEY
           script: |
             set -e
             cd /srv/civicpulse
             git fetch origin main
             git reset --hard origin/main
             # ai/.env is gitignored, so it survives the reset. Rewrite it on every
-            # deploy: screening runs on the project's own trained models only.
+            # deploy so a rotated key is picked up: Gemini is the main screening
+            # model, the trained models below are its fallback.
             umask 077
-            : > ai/.env
+            printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY" > ai/.env
             # Trained models (git-ignored) are copied to ai/models by hand. Enable
             # each one only if its files are present, so a missing model just
             # reports model_not_loaded instead of breaking the deploy.
